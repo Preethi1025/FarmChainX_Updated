@@ -1,96 +1,71 @@
-import React from 'react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-
-const qualityData = [
-  { day: "Mon", score: 82 },
-  { day: "Tue", score: 88 },
-  { day: "Wed", score: 91 },
-  { day: "Thu", score: 86 },
-  { day: "Fri", score: 92 },
-]
-
-const shipmentData = [
-  { label: "In Transit", value: 4 },
-  { label: "Delivered", value: 12 },
-  { label: "Pending QR", value: 3 },
-]
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useAuth } from "../../context/AuthContext";
+import ListingModal from "./ListingModal";
 
 const FarmerDashboard = () => {
+  const { user } = useAuth();
+  const [crops, setCrops] = useState([]);
+  const [showListingModal, setShowListingModal] = useState(false);
+  const [selectedCrop, setSelectedCrop] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const cropRes = await axios.get(`http://localhost:8080/api/crops/farmer/${user.id}`);
+      const listingRes = await axios.get(`http://localhost:8080/api/listings`);
+
+      const listedCropIds = new Set(listingRes.data.map(listing => listing.cropId));
+
+      const updatedCrops = cropRes.data.map(crop => ({
+        ...crop,
+        listed: listedCropIds.has(crop.cropId)
+      }));
+
+      setCrops(updatedCrops);
+    };
+
+    fetchData();
+  }, [user]);
+
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">
-            Farmer Overview
-          </h1>
-          <p className="text-xs text-slate-500">
-            Monitor harvest quality, active batches, and handovers at a glance.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="badge">Today’s AI Quality Avg: 91%</span>
-          <span className="badge bg-sky-50 text-sky-700">Active Batches: 7</span>
-        </div>
-      </header>
+    <div className="p-6">
+      <h2 className="text-lg font-semibold mb-4">Your Crops</h2>
 
-      <section className="grid lg:grid-cols-3 gap-4">
-        {shipmentData.map((card) => (
-          <div key={card.label} className="card">
-            <p className="text-xs text-slate-500 mb-1">{card.label}</p>
-            <p className="text-2xl font-semibold text-slate-900">{card.value}</p>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Updated a few minutes ago
-            </p>
+      {crops.map(crop => (
+        <div key={crop.cropId} className="border p-4 rounded-md bg-gray-50 flex justify-between items-center mb-3">
+          <div>
+            <p className="font-semibold">{crop.cropName}</p>
+            <small className="text-gray-500">Batch: {crop.batchId}</small>
           </div>
-        ))}
-      </section>
 
-      <section className="grid lg:grid-cols-3 gap-5">
-        <div className="card lg:col-span-2">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-slate-800">
-              Weekly AI Quality Score Trend
-            </p>
-            <span className="text-[11px] text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">
-              +4.8% vs last week
-            </span>
-          </div>
-          <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={qualityData}>
-                <defs>
-                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#16a34a" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} domain={[70, 100]} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="score"
-                  stroke="#16a34a"
-                  fill="url(#colorScore)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          {crop.listed ? (
+            <button className="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed" disabled>
+              ✔ Listed
+            </button>
+          ) : (
+            <button
+              onClick={() => { setSelectedCrop(crop); setShowListingModal(true); }}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              List for Sale
+            </button>
+          )}
         </div>
+      ))}
 
-        <div className="card space-y-3">
-          <p className="text-sm font-semibold text-slate-800">
-            Quick Stats
-          </p>
-          <div className="space-y-2 text-sm">
-            <p className="text-slate-700"><span className="font-semibold">Total Harvested:</span> 247 kg</p>
-            <p className="text-slate-700"><span className="font-semibold">Avg Grade:</span> A</p>
-            <p className="text-slate-700"><span className="font-semibold">Revenue:</span> $3,421</p>
-          </div>
-        </div>
-      </section>
+      {showListingModal && selectedCrop && (
+        <ListingModal
+          crop={selectedCrop}
+          onClose={() => setShowListingModal(false)}
+          onSuccess={(listing) => {
+            setCrops(prev => prev.map(c =>
+              c.cropId === listing.cropId ? { ...c, listed: true } : c
+            ));
+          }}
+        />
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default FarmerDashboard
+export default FarmerDashboard;

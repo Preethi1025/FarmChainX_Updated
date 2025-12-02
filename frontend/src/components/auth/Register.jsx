@@ -5,35 +5,106 @@ import { User, Mail, Lock, Sprout, ShoppingCart, Eye, EyeOff, Leaf, Phone } from
 import { motion } from 'framer-motion';
 
 const Register = () => {
-const [formData, setFormData] = useState({
-name: '',
-email: '',
-password: '',
-confirmPassword: '',
-phone: '',
-role: 'FARMER'
-});
-const [showPassword, setShowPassword] = useState(false);
-const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phone: '',
+    role: 'FARMER'
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
 
 const { register, loading } = useAuth();
 const navigate = useNavigate();
 
 const handleChange = (e) => {
-setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const { name, value } = e.target;
+  setFormData(prev => ({ ...prev, [name]: value }));
+  // Validate on change
+  validateField(name, value);
+};
+
+const validateField = (fieldName, value) => {
+  let message = '';
+
+  if (fieldName === 'name') {
+    if (!value || value.trim().length < 3) {
+      message = 'Name must be at least 3 characters.';
+    } else if (!/^[A-Za-z0-9_\- ]+$/.test(value)) {
+      message = 'Name contains invalid characters.';
+    }
+  }
+
+  if (fieldName === 'email') {
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!value || !emailRegex.test(value)) {
+      message = 'Please enter a valid email address.';
+    } else if (!value.toLowerCase().endsWith('@gmail.com')) {
+      // Enforce Gmail addresses per request
+      message = 'Please use a Gmail address (example@gmail.com).';
+    }
+  }
+
+  if (fieldName === 'password') {
+    const pw = value || '';
+    if (pw.length < 8) {
+      message = 'Password must be at least 8 characters.';
+    } else if (!/[A-Z]/.test(pw)) {
+      message = 'Password must contain an uppercase letter.';
+    } else if (!/[a-z]/.test(pw)) {
+      message = 'Password must contain a lowercase letter.';
+    } else if (!/[0-9]/.test(pw)) {
+      message = 'Password must contain a number.';
+    } else if (!/[!@#$%^&*(),.?:{}|<>]/.test(pw)) {
+      message = 'Password must contain a special character.';
+    }
+  }
+
+  if (fieldName === 'confirmPassword') {
+    if (value !== formData.password) {
+      message = 'Passwords do not match.';
+    }
+  }
+
+  setErrors(prev => ({ ...prev, [fieldName]: message }));
+  return message === '';
 };
 
 const handleSubmit = async (e) => {
-e.preventDefault();
-if (formData.password !== formData.confirmPassword) {
-alert("Passwords don't match!");
-return;
-}
-try {
-await register(formData, navigate); // pass navigate for auto-login redirect
-} catch (err) {
-console.error('Registration failed:', err);
-}
+  e.preventDefault();
+  // Run validations for required fields
+  const fieldsToValidate = ['name', 'email', 'password', 'confirmPassword', 'phone'];
+  let valid = true;
+  fieldsToValidate.forEach(f => {
+    const ok = validateField(f, formData[f]);
+    if (!ok) valid = false;
+  });
+
+  if (!valid) {
+    alert('Please fix validation errors before submitting.');
+    return;
+  }
+
+  try {
+    await register(formData, navigate); // pass navigate for auto-login redirect
+  } catch (err) {
+    console.error('Registration failed:', err);
+  }
+};
+
+const isFormValid = () => {
+  const required = ['name', 'email', 'password', 'confirmPassword', 'phone'];
+  for (const f of required) {
+    if (!formData[f] || String(formData[f]).trim() === '') return false;
+  }
+  for (const v of Object.values(errors)) {
+    if (v) return false;
+  }
+  return true;
 };
 
 return ( <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -54,6 +125,7 @@ FarmChainX </h1> <p className="text-sm text-gray-500">Transparent Agriculture</p
             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
             placeholder="Enter your full name" />
         </div>
+        {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
       </div>
 
       {/* Email */}
@@ -67,6 +139,7 @@ FarmChainX </h1> <p className="text-sm text-gray-500">Transparent Agriculture</p
             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
             placeholder="Enter your email" />
         </div>
+        {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
       </div>
 
       {/* Role */}
@@ -99,6 +172,7 @@ FarmChainX </h1> <p className="text-sm text-gray-500">Transparent Agriculture</p
           <button type="button" onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 pr-3 flex items-center">{showPassword ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}</button>
         </div>
+        {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
       </div>
 
     
@@ -116,6 +190,7 @@ FarmChainX </h1> <p className="text-sm text-gray-500">Transparent Agriculture</p
           <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             className="absolute inset-y-0 right-0 pr-3 flex items-center">{showConfirmPassword ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}</button>
         </div>
+        {errors.confirmPassword && <p className="text-red-600 text-sm mt-1">{errors.confirmPassword}</p>}
       </div>
         {/* Phone Number */}
       <div>
@@ -128,11 +203,12 @@ FarmChainX </h1> <p className="text-sm text-gray-500">Transparent Agriculture</p
             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
             placeholder="Enter your phone number" />
         </div>
+        {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone}</p>}
       </div>
 
       {/* Submit */}
       <div>
-        <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 font-medium transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+        <button type="submit" disabled={!isFormValid() || loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 font-medium transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
           {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : `Create ${formData.role.toLowerCase()} account`}
         </button>
       </div>
@@ -151,3 +227,4 @@ FarmChainX </h1> <p className="text-sm text-gray-500">Transparent Agriculture</p
 };
 
 export default Register;
+

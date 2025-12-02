@@ -1,36 +1,61 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import axios from 'axios'
+import { useAuth } from '../../context/AuthContext'
 
-const ConsumerDashboard = () => {
+const BuyerDashboard = () => {
+  const { user } = useAuth()
+  const [scannedProducts, setScannedProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Placeholder for fetching scanned products
+    // Update with actual API endpoint when available
+    setLoading(false)
+    setScannedProducts([])
+  }, [user])
+
   return (
     <div className="space-y-5">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">
-            Consumer Verification Portal
+            Buyer Dashboard
           </h2>
           <p className="text-xs text-slate-500">
-            Scan a QR from your product to see origin, quality score, and journey.
+            Verify products and track your orders from farmers.
           </p>
         </div>
-        <a href="/consumer/scan" className="btn-primary text-xs">
-          Scan new product
+        <a href="/marketplace" className="btn-primary text-xs">
+          Browse Products
         </a>
       </header>
 
       <div className="card grid md:grid-cols-2 gap-4">
         <div>
           <p className="text-sm font-semibold text-slate-800 mb-2">
-            Recently scanned
+            Recently Scanned
           </p>
-          <ul className="space-y-3 text-xs">
-            <li className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-slate-800">FarmChainX Alphonso</p>
-                <p className="text-slate-500">Grade A · Farmer: Kavya Farms</p>
-              </div>
-              <span className="badge bg-emerald-50 text-emerald-600">Verified</span>
-            </li>
-          </ul>
+          {loading ? (
+            <p className="text-xs text-slate-500">Loading...</p>
+          ) : scannedProducts.length === 0 ? (
+            <ul className="space-y-3 text-xs">
+              <li className="text-slate-500">
+                No products scanned yet. Scan a QR code from a product to verify its origin.
+              </li>
+            </ul>
+          ) : (
+            <ul className="space-y-3 text-xs">
+              {scannedProducts.map((product, index) => (
+                <li key={index} className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-slate-800">{product.name}</p>
+                    <p className="text-slate-500">Farmer: {product.farmer}</p>
+                  </div>
+                  <span className="badge bg-emerald-50 text-emerald-600">Verified</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="rounded-2xl bg-gradient-to-br from-primary-600 to-emerald-500 text-white p-5 flex flex-col justify-between">
           <div>
@@ -51,8 +76,15 @@ const ConsumerDashboard = () => {
           </p>
         </div>
       </div>
+
+      <div className="card">
+        <h3 className="text-sm font-semibold text-slate-800 mb-4">Your Orders</h3>
+        <p className="text-xs text-slate-500">
+          No orders yet. Start by browsing available products from farmers.
+        </p>
+      </div>
     </div>
   )
 }
 
-export default ConsumerDashboard
+export default BuyerDashboard

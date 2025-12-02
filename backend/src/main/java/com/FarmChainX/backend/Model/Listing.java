@@ -1,66 +1,65 @@
 package com.FarmChainX.backend.Model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "listings")
 public class Listing {
 
     @Id
-    private String listingId;
-    private String cropId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "listing_id")
+    private Long listingId;
+
+    @Column(name = "crop_id")
+    private Long cropId;
+    
+    @Column(name = "farmer_id")
     private String farmerId;
-    private String price;
-    private String quantity;
-    private String status;  // ACTIVE, SOLD, EXPIRED
+    
+    @Column(name = "batch_id")
+    private String batchId;
 
-    public String getListingId() {
-        return listingId;
-    }
+    @Column(name = "price")
+    private Double price;
+    
+    @Column(name = "quantity")
+    private Double quantity;
 
-    public void setListingId(String listingId) {
-        this.listingId = listingId;
-    }
+    @Column(name = "status")
+    private String status;
 
-    public String getCropId() {
-        return cropId;
-    }
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-    public void setCropId(String cropId) {
-        this.cropId = cropId;
-    }
+    public Long getListingId() { return listingId; }
+    public void setListingId(Long listingId) { this.listingId = listingId; }
 
-    public String getFarmerId() {
-        return farmerId;
-    }
+    public Long getCropId() { return cropId; }
+    public void setCropId(Long cropId) { this.cropId = cropId; }
 
-    public void setFarmerId(String farmerId) {
-        this.farmerId = farmerId;
-    }
+    public String getFarmerId() { return farmerId; }
+    public void setFarmerId(String farmerId) { this.farmerId = farmerId; }
 
-    public String getPrice() {
-        return price;
-    }
+    public String getBatchId() { return batchId; }
+    public void setBatchId(String batchId) { this.batchId = batchId; }
 
-    public void setPrice(String price) {
-        this.price = price;
-    }
+    public Double getPrice() { return price; }
+    public void setPrice(Double price) { this.price = price; }
 
-    public String getQuantity() {
-        return quantity;
-    }
+    public Double getQuantity() { return quantity; }
+    public void setQuantity(Double quantity) { this.quantity = quantity; }
 
-    public void setQuantity(String quantity) {
-        this.quantity = quantity;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public String getStatus() {
-        return status;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

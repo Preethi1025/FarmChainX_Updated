@@ -2,51 +2,45 @@ package com.FarmChainX.backend.Service;
 
 import com.FarmChainX.backend.Model.Listing;
 import com.FarmChainX.backend.Repository.ListingRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class ListingService {
 
-    @Autowired
-    private ListingRepository listingRepository;
+    private final ListingRepository listingRepository;
 
-    // CREATE LISTING
-    public Listing createListing(Listing listing) {
-        listing.setListingId(UUID.randomUUID().toString());
-        listing.setStatus("ACTIVE");
-        return listingRepository.save(listing);
+    public ListingService(ListingRepository listingRepository) {
+        this.listingRepository = listingRepository;
     }
 
-    // GET ALL LISTINGS
+    public Listing createListing(Listing listing) {
+
+        if (listingRepository.existsByCropId(listing.getCropId())) {
+            throw new RuntimeException("This crop is already listed!");
+        }
+
+        System.out.println(" Saving Listing: " + listing);
+
+        if (listing.getCreatedAt() == null) {
+            listing.setCreatedAt(java.time.LocalDateTime.now());
+        }
+        if (listing.getUpdatedAt() == null) {
+            listing.setUpdatedAt(java.time.LocalDateTime.now());
+        }
+
+        if (listing.getStatus() == null || listing.getStatus().isEmpty()) {
+            listing.setStatus("ACTIVE");
+        }
+
+        Listing saved = listingRepository.save(listing);
+        System.out.println(" After Save - Listing ID: " + saved.getListingId());
+
+        return saved;
+    }
+
     public List<Listing> getAllListings() {
         return listingRepository.findAll();
-    }
-
-    // GET LISTINGS OF A SPECIFIC FARMER
-    public List<Listing> getListingsByFarmer(String farmerId) {
-        return listingRepository.findByFarmerId(farmerId);
-    }
-
-    // UPDATE LISTING
-    public Listing updateListing(String listingId, Listing updated) {
-        return listingRepository.findById(listingId).map(existing -> {
-            existing.setPrice(updated.getPrice());
-            existing.setQuantity(updated.getQuantity());
-            existing.setStatus(updated.getStatus());
-            return listingRepository.save(existing);
-        }).orElse(null);
-    }
-
-    // DELETE LISTING
-    public boolean deleteListing(String listingId) {
-        if (listingRepository.existsById(listingId)) {
-            listingRepository.deleteById(listingId);
-            return true;
-        }
-        return false;
     }
 }
