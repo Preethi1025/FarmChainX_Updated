@@ -17,7 +17,7 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
     price: '',      // Required by database
     quantity: ''    // Required by database
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [qrValue, setQrValue] = useState('');
   const [generatedBatchId, setGeneratedBatchId] = useState('');
@@ -26,7 +26,7 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
 
   // Crop type options
   const cropTypes = [
-    'TOMATO', 'WHEAT', 'RICE', 'POTATO', 'CORN', 'CARROT', 
+    'TOMATO', 'WHEAT', 'RICE', 'POTATO', 'CORN', 'CARROT',
     'LETTUCE', 'SPINACH', 'ONION', 'GARLIC', 'CUCUMBER',
     'PEPPER', 'EGGPLANT', 'BEANS', 'PEAS', 'OTHER'
   ];
@@ -37,7 +37,7 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
       ...prev,
       [name]: value
     }));
-    
+
     // Clear error when user types
     if (error) setError('');
   };
@@ -48,61 +48,61 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
       setError('Crop Name is required');
       return false;
     }
-    
+
     if (!formData.cropType) {
       setError('Crop Type is required');
       return false;
     }
-    
+
     if (!formData.sowDate) {
       setError('Sow Date is required');
       return false;
     }
-    
+
     if (!formData.location.trim()) {
       setError('Location is required');
       return false;
     }
-    
+
     if (!formData.farmerId) {
       setError('Farmer ID is required');
       return false;
     }
-    
+
     // Price validation (required by database)
     if (!formData.price || formData.price.trim() === '') {
       setError('Price is required');
       return false;
     }
-    
+
     const priceNum = parseFloat(formData.price);
     if (isNaN(priceNum) || priceNum < 0) {
       setError('Price must be a valid positive number');
       return false;
     }
-    
+
     // Quantity validation (required by database)
     if (!formData.quantity || formData.quantity.trim() === '') {
       setError('Quantity is required');
       return false;
     }
-    
+
     const quantityNum = parseFloat(formData.quantity);
     if (isNaN(quantityNum) || quantityNum <= 0) {
       setError('Quantity must be a valid positive number');
       return false;
     }
-    
+
     // Date validation
     const sowDate = new Date(formData.sowDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (sowDate > today) {
       setError('Sow date cannot be in the future');
       return false;
     }
-    
+
     if (formData.expectedHarvestDate) {
       const harvestDate = new Date(formData.expectedHarvestDate);
       if (harvestDate <= sowDate) {
@@ -110,7 +110,7 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
         return false;
       }
     }
-    
+
     // Yield validation
     if (formData.estimatedYield) {
       const yieldNum = parseFloat(formData.estimatedYield);
@@ -119,7 +119,7 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -151,37 +151,45 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
 
       // Try main endpoint
       const response = await axios.post('http://localhost:8080/api/crops/add', cropData);
-      
+
       const savedCrop = response.data;
       console.log('Saved crop response:', savedCrop);
+      // Ensure QR Code exists for the saved crop
+      if (!savedCrop.qrCodeUrl) {
+        savedCrop.qrCodeUrl = `${window.location.origin}/trace/${savedCrop.batchId}`;
+      }
+
+      setGeneratedBatchId(savedCrop.batchId);
+      setQrValue(savedCrop.qrCodeUrl);
+
 
       // Generate QR code with batch ID (NOT cropId)
       const batchId = savedCrop.batchId;
       if (!batchId) {
         throw new Error('Batch ID not returned from server');
       }
-      
+
       const qrUrl = `${window.location.origin}/trace/${batchId}`;
-      
+
       setGeneratedBatchId(batchId);
       setQrValue(qrUrl);
       setSuccess(true);
-const shouldList = window.confirm("Crop added successfully! Do you want to create a marketplace listing now?");
+      const shouldList = window.confirm("Crop added successfully! Do you want to create a marketplace listing now?");
 
-if (onCropAdded) {
-  onCropAdded(savedCrop, shouldList);
-}
+      if (onCropAdded) {
+        onCropAdded(savedCrop, shouldList);
+      }
 
 
 
     } catch (err) {
       console.error('Error adding crop:', err);
-      
+
       let errorMessage = 'Error adding crop';
-      
+
       if (err.response) {
         console.error('Server response:', err.response.data);
-        
+
         // Handle different error formats
         if (err.response.data.message) {
           errorMessage = err.response.data.message;
@@ -190,7 +198,7 @@ if (onCropAdded) {
         } else if (typeof err.response.data === 'string') {
           errorMessage = err.response.data;
         }
-        
+
         // Specific status code handling
         if (err.response.status === 400) {
           errorMessage = `Validation error: ${errorMessage}`;
@@ -204,7 +212,7 @@ if (onCropAdded) {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -245,7 +253,7 @@ if (onCropAdded) {
       <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-900">Add New Crop</h2>
-          <button 
+          <button
             onClick={handleClose}
             className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
           >
@@ -274,11 +282,11 @@ if (onCropAdded) {
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">Scan to Track</h4>
                 <div className="flex flex-col items-center p-4 bg-gray-50 rounded-xl">
-                  <QRCodeSVG 
-                    value={qrValue} 
-                    size={180} 
-                    level="H" 
-                    includeMargin 
+                  <QRCodeSVG
+                    value={qrValue}
+                    size={180}
+                    level="H"
+                    includeMargin
                     className="mb-3"
                   />
                   <p className="text-xs text-gray-500 break-all text-center">
@@ -462,7 +470,7 @@ if (onCropAdded) {
               {/* Price and Quantity Section */}
               <div className="pt-2 border-t">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Market Information</h4>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   {/* Price */}
                   <div>
@@ -541,7 +549,7 @@ if (onCropAdded) {
             {/* Information Note */}
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-xs text-blue-700">
-                <span className="font-medium">Note:</span> Price and quantity are required for market listing. 
+                <span className="font-medium">Note:</span> Price and quantity are required for market listing.
                 You can update these values later when the crop is ready for sale.
               </p>
             </div>

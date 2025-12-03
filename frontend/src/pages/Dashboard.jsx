@@ -8,14 +8,15 @@ import {
 
 import AddCropModal from '../components/AddCropModal';
 import ListingModal from '../components/farmer/ListingModal';
+import BatchManagement from '../components/farmer/BatchManagement'; // <-- ADDED
 import axios from 'axios';
-
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [showAddCrop, setShowAddCrop] = useState(false);
+  const [showBatchManager, setShowBatchManager] = useState(false); // <-- ADDED
   const [crops, setCrops] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,25 +28,22 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const response = await axios.get(`http://localhost:8080/api/crops/farmer/${user.id}`);
-      // Fetch listings for this farmer
-const listingsRes = await axios.get(`http://localhost:8080/api/listings/`);
-const farmerListings = listingsRes.data.filter(l => l.farmerId === user.id);
 
-const mappedCrops = response.data.map(crop => ({
-  ...crop,
-  listed: farmerListings.some(l => l.cropId === crop.cropId) // mark true if already listed
-}));
+      // Fetch listings
+      const listingsRes = await axios.get(`http://localhost:8080/api/listings/`);
+      const farmerListings = listingsRes.data.filter(l => l.farmerId === user.id);
 
-setCrops(mappedCrops);
+      const mappedCrops = response.data.map(crop => ({
+        ...crop,
+        listed: farmerListings.some(l => l.cropId === crop.cropId)
+      }));
 
-
-      // Use previously fetched listings for counts (we already fetched above)
-      let activeListingsCount = farmerListings.length;
+      setCrops(mappedCrops);
 
       const farmerStats = {
         overview: [
           { label: 'Total Products', value: response.data?.length || 0, icon: Package, change: '+0%', trend: 'up' },
-          { label: 'Active Listings', value: activeListingsCount, icon: Sprout, change: '+0%', trend: 'up' },
+          { label: 'Active Listings', value: farmerListings.length, icon: Sprout, change: '+0%', trend: 'up' },
           { label: 'Monthly Revenue', value: '₹0', icon: IndianRupee, change: '0%', trend: 'up' },
           { label: 'Customer Rating', value: '0/5.0', icon: Users, change: '0', trend: 'up' }
         ],
@@ -76,7 +74,7 @@ setCrops(mappedCrops);
       const buyerStats = {
         overview: [
           { label: 'Total Orders', value: 0, icon: ShoppingCart, change: '0%', trend: 'up' },
-          { label: 'Pending Orders', value: 0, icon: Clock, change: '0%', trend: 'down' },
+          { label: 'Pending Orders', value: 0, icon: Clock, change: 'down', trend: 'down' },
           { label: 'Total Spent', value: '₹0', icon: IndianRupee, change: '0%', trend: 'up' },
           { label: 'Favorite Farmers', value: 0, icon: Users, change: '0%', trend: 'up' }
         ],
@@ -90,7 +88,6 @@ setCrops(mappedCrops);
     }
   };
 
-  
   useEffect(() => {
     if (user) {
       user.role === 'FARMER' ? fetchFarmerData() : fetchBuyerData();
@@ -123,12 +120,24 @@ setCrops(mappedCrops);
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <motion.h1
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-bold text-gray-900 mb-4">
-          Welcome back, {user?.name} 👋
-        </motion.h1>
+          className="flex items-center justify-between mb-6"
+        >
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {user?.name} 👋
+          </h1>
+
+          {user.role === "FARMER" && (
+            <button
+              className="btn-secondary text-sm"
+              onClick={() => setShowBatchManager(true)}
+            >
+              Manage Batches
+            </button>
+          )}
+        </motion.div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -152,7 +161,9 @@ setCrops(mappedCrops);
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Your Crops</h3>
-              <button onClick={() => setShowAddCrop(true)} className="btn-primary">Add Crop</button>
+              <button onClick={() => setShowAddCrop(true)} className="btn-primary">
+                Add Crop
+              </button>
             </div>
 
             {crops.length === 0 ? (
@@ -183,6 +194,7 @@ setCrops(mappedCrops);
           </div>
         )}
 
+        {/* Modals */}
         {showAddCrop && (
           <AddCropModal onClose={() => setShowAddCrop(false)} farmerId={user.id} onCropAdded={handleCropAdded} />
         )}
@@ -198,9 +210,13 @@ setCrops(mappedCrops);
                 )
               );
             }}
-
           />
         )}
+
+        {showBatchManager && (
+          <BatchManagement onClose={() => setShowBatchManager(false)} />
+        )}
+
       </div>
     </div>
   );

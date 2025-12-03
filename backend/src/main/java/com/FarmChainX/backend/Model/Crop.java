@@ -8,15 +8,15 @@ import java.time.LocalDateTime;
 public class Crop {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment from DB
+    @GeneratedValue(strategy = GenerationType.IDENTITY) 
     @Column(name = "crop_id")
     private Long cropId;
 
     @Column(name = "farmer_id")
-    private String farmerId; // Farmer ID from User model (String type)
+    private String farmerId; 
 
     @Column(name = "batch_id")
-    private String batchId; // Unique batch identifier
+    private String batchId; 
 
     @Column(name = "crop_name")
     private String cropName;
@@ -32,7 +32,6 @@ public class Crop {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Additional fields requested
     @Column(name = "crop_type")
     private String cropType;
 
@@ -55,7 +54,7 @@ public class Crop {
     private String estimatedYield;
 
     @Column(name = "expected_harvest_date")
-    private String expectedHarvestDate; // stored as DATE in DB but handled as String here
+    private String expectedHarvestDate; 
 
     @Column(name = "actual_harvest_date")
     private String actualHarvestDate;
@@ -66,7 +65,12 @@ public class Crop {
     @Column(name = "ai_confidence_score")
     private Double aiConfidenceScore;
 
-    // Getters and Setters
+    @Column(name = "stage")
+    private String stage;
+
+    @Column(columnDefinition = "TEXT")
+    private String traceLog;
+
     public Long getCropId() {
         return cropId;
     }
@@ -235,4 +239,3 @@ public class Crop {
         this.aiConfidenceScore = aiConfidenceScore;
     }
 }
-

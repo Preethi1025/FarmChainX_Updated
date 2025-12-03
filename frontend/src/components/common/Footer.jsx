@@ -58,7 +58,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-white/20 mt-8 pt-8 text-center text-gray-300">
-          <p>&copy; 2024 FarmChainX. All rights reserved. Cultivating trust in every harvest.</p>
+          <p>&copy; 2025 FarmChainX. All rights reserved. Cultivating trust in every harvest.</p>
         </div>
       </div>
     </footer>

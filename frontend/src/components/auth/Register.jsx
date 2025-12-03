@@ -23,7 +23,6 @@ const navigate = useNavigate();
 const handleChange = (e) => {
   const { name, value } = e.target;
   setFormData(prev => ({ ...prev, [name]: value }));
-  // Validate on change
   validateField(name, value);
 };
 
@@ -39,12 +38,10 @@ const validateField = (fieldName, value) => {
   }
 
   if (fieldName === 'email') {
-    // Basic email format check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!value || !emailRegex.test(value)) {
       message = 'Please enter a valid email address.';
     } else if (!value.toLowerCase().endsWith('@gmail.com')) {
-      // Enforce Gmail addresses per request
       message = 'Please use a Gmail address (example@gmail.com).';
     }
   }
@@ -76,7 +73,6 @@ const validateField = (fieldName, value) => {
 
 const handleSubmit = async (e) => {
   e.preventDefault();
-  // Run validations for required fields
   const fieldsToValidate = ['name', 'email', 'password', 'confirmPassword', 'phone'];
   let valid = true;
   fieldsToValidate.forEach(f => {
@@ -90,7 +86,7 @@ const handleSubmit = async (e) => {
   }
 
   try {
-    await register(formData, navigate); // pass navigate for auto-login redirect
+    await register(formData, navigate); 
   } catch (err) {
     console.error('Registration failed:', err);
   }
@@ -156,6 +152,11 @@ FarmChainX </h1> <p className="text-sm text-gray-500">Transparent Agriculture</p
             <ShoppingCart className="h-6 w-6 mx-auto mb-2" />
             <span className="font-medium">Buyer</span>
           </button>
+          <button type="button"
+    onClick={() => setFormData(prev => ({ ...prev, role: 'DISTRIBUTOR' }))}
+    className={`p-4 border-2 rounded-xl ${formData.role === 'DISTRIBUTOR' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-300'}`}>
+    Distributor
+  </button>
         </div>
       </div>
 

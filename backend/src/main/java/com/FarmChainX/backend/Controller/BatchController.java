@@ -43,7 +43,6 @@ public class BatchController {
         return ResponseEntity.ok(batch);
     }
 
-    // Get crops for a batch
     @GetMapping("/{batchId}/crops")
     public ResponseEntity<?> getCropsForBatch(@PathVariable String batchId) {
         try {
@@ -53,7 +52,6 @@ public class BatchController {
         }
     }
 
-    // Bulk update status for a batch
     @PutMapping("/{batchId}/status")
     public ResponseEntity<?> updateBatchStatus(@PathVariable String batchId, @RequestBody Map<String, Object> body) {
         try {
@@ -65,7 +63,6 @@ public class BatchController {
         }
     }
 
-    // Bulk update quality for a batch
     @PutMapping("/{batchId}/quality")
     public ResponseEntity<?> updateBatchQuality(@PathVariable String batchId, @RequestBody Map<String, Object> body) {
         try {
@@ -82,7 +79,6 @@ public class BatchController {
         }
     }
 
-    // Split batch: divide into two batches
     @PostMapping("/{batchId}/split")
     public ResponseEntity<?> splitBatch(@PathVariable String batchId) {
         try {
@@ -94,7 +90,6 @@ public class BatchController {
         }
     }
 
-    // Merge batches: move all crops from source to target
     @PostMapping("/{sourceBatchId}/merge-into/{targetBatchId}")
     public ResponseEntity<?> mergeBatch(@PathVariable String sourceBatchId, @PathVariable String targetBatchId) {
         try {
