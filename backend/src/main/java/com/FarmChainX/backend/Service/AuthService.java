@@ -16,19 +16,15 @@ public class AuthService {
 
     BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    // Register
     public User register(User user) {
 
-        // generate random ID
         user.setId(UUID.randomUUID().toString());
 
-        // hash password
         user.setPassword(encoder.encode(user.getPassword()));
 
         return userRepository.save(user);
     }
 
-    // Login
     public boolean login(String email, String password) {
         User user = userRepository.findByEmail(email);
 

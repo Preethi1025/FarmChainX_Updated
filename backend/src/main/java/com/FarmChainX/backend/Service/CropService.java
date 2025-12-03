@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class CropService {
@@ -23,9 +22,7 @@ public class CropService {
         this.batchRecordRepository = batchRecordRepository;
     }
 
-    // ADD NEW CROP
     public Crop addCrop(Crop crop) {
-        // Validate required fields
         if (crop.getFarmerId() == null || crop.getFarmerId().isEmpty()) {
             throw new IllegalArgumentException("farmerId is required");
         }
@@ -39,7 +36,6 @@ public class CropService {
             throw new IllegalArgumentException("quantity is required");
         }
 
-        // If batchId not provided, generate one
         String batchId = crop.getBatchId();
         if (batchId == null || batchId.isEmpty()) {
             batchId = generateBatchId(crop.getCropType());
@@ -50,12 +46,10 @@ public class CropService {
         crop.setCreatedAt(now);
         crop.setUpdatedAt(now);
 
-        // default status
         if (crop.getStatus() == null || crop.getStatus().isEmpty()) {
             crop.setStatus("PLANTED");
         }
 
-        // generate qr code url based on batch id and frontend base
         String frontendBase = System.getProperty("farmchainx.frontend.url");
         if (frontendBase == null || frontendBase.isEmpty()) {
             frontendBase = "http://localhost:5173"; // default
@@ -64,9 +58,8 @@ public class CropService {
             crop.setQrCodeUrl(frontendBase + "/trace/" + batchId);
         }
 
-        Crop saved = cropRepository.save(crop);  // cropId auto-generated
+        Crop saved = cropRepository.save(crop);
 
-        // Ensure a BatchRecord exists for this batch
         if (!batchRecordRepository.existsById(batchId)) {
             BatchRecord record = new BatchRecord();
             record.setBatchId(batchId);
@@ -84,7 +77,6 @@ public class CropService {
             record.setCreatedAt(LocalDateTime.now());
             batchRecordRepository.save(record);
         } else {
-            // If batch exists, increment totalQuantity
             Optional<BatchRecord> existing = batchRecordRepository.findById(batchId);
             if (existing.isPresent()) {
                 BatchRecord rec = existing.get();
@@ -109,7 +101,6 @@ public class CropService {
         return String.format("FCX-%s-%s-%s", cropCode, dateCode, randomCode);
     }
 
-    // GET ALL CROPS OF A FARMER
     public List<Crop> getCropsByFarmer(String farmerId) {
         return cropRepository.findByFarmerId(farmerId);
     }
@@ -118,7 +109,6 @@ public class CropService {
         return cropRepository.findByBatchId(batchId);
     }
 
-    // Bulk update status for all crops in a batch
     public List<Crop> bulkUpdateCropStatusByBatch(String batchId, String status) {
         List<Crop> crops = cropRepository.findByBatchId(batchId);
         for (Crop c : crops) {
@@ -127,9 +117,8 @@ public class CropService {
         }
         List<Crop> saved = cropRepository.saveAll(crops);
 
-        // update batch record status
         if (batchRecordRepository.existsById(batchId)) {
-            com.FarmChainX.backend.Model.BatchRecord rec = batchRecordRepository.findById(batchId).get();
+            BatchRecord rec = batchRecordRepository.findById(batchId).get();
             rec.setStatus(status);
             if ("HARVESTED".equals(status) && rec.getHarvestDate() == null) {
                 rec.setHarvestDate(LocalDate.now());
@@ -139,7 +128,6 @@ public class CropService {
         return saved;
     }
 
-    // Bulk update quality for all crops in a batch (no AI processing here)
     public List<Crop> bulkUpdateQualityByBatch(String batchId, String qualityGrade, Double confidenceScore) {
         List<Crop> crops = cropRepository.findByBatchId(batchId);
         for (Crop c : crops) {
@@ -147,16 +135,13 @@ public class CropService {
             if (confidenceScore != null) c.setAiConfidenceScore(confidenceScore);
             c.setUpdatedAt(LocalDateTime.now());
         }
-        // update batch record average score
         if (batchRecordRepository.existsById(batchId)) {
-            com.FarmChainX.backend.Model.BatchRecord rec = batchRecordRepository.findById(batchId).get();
+            BatchRecord rec = batchRecordRepository.findById(batchId).get();
             rec.setAvgQualityScore(confidenceScore);
             batchRecordRepository.save(rec);
         }
         return cropRepository.saveAll(crops);
     }
-
-    // UPDATE CROP
     public Crop updateCrop(Long cropId, Crop updatedCrop) {
         Optional<Crop> existing = cropRepository.findById(cropId);
 
@@ -171,7 +156,6 @@ public class CropService {
         return cropRepository.save(crop);
     }
 
-    // MARK CROP AS HARVESTED
     public Crop markHarvested(Long cropId, String actualHarvestDateStr, Double actualYield) {
         Optional<Crop> existing = cropRepository.findById(cropId);
         if (existing.isEmpty()) return null;
@@ -184,12 +168,11 @@ public class CropService {
         }
         crop.setUpdatedAt(LocalDateTime.now());
 
-        // Update batch record harvest date/status if present
         String batchId = crop.getBatchId();
         if (batchId != null && !batchId.isEmpty() && batchRecordRepository.existsById(batchId)) {
-            Optional<com.FarmChainX.backend.Model.BatchRecord> br = batchRecordRepository.findById(batchId);
+            Optional<BatchRecord> br = batchRecordRepository.findById(batchId);
             if (br.isPresent()) {
-                com.FarmChainX.backend.Model.BatchRecord rec = br.get();
+                BatchRecord rec = br.get();
                 if (rec.getHarvestDate() == null) {
                     try {
                         rec.setHarvestDate(LocalDate.parse(actualHarvestDateStr));
@@ -203,7 +186,6 @@ public class CropService {
         return cropRepository.save(crop);
     }
 
-    // DELETE CROP
     public boolean deleteCrop(Long cropId) {
         if (!cropRepository.existsById(cropId)) return false;
         cropRepository.deleteById(cropId);
@@ -211,8 +193,6 @@ public class CropService {
     }
 
     public Crop getCropById(Long id) {
-    return cropRepository.findById(id).orElse(null);
-}
-
-
+        return cropRepository.findById(id).orElse(null);
+    }
 }

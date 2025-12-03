@@ -4,8 +4,6 @@ import com.FarmChainX.backend.Model.Crop;
 import com.FarmChainX.backend.Service.CropService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -22,7 +20,6 @@ public class CropController {
         this.cropService = cropService;
     }
 
-    // ADD CROP
     @PostMapping("/add")
     public ResponseEntity<?> addCrop(@RequestBody Crop crop) {
         try {
@@ -38,7 +35,6 @@ public class CropController {
         }
     }
 
-    // FETCH ALL CROPS OF A FARMER
     @GetMapping("/farmer/{farmerId}")
     public ResponseEntity<?> getCrops(@PathVariable String farmerId) {
         try {
@@ -50,7 +46,6 @@ public class CropController {
         }
     }
 
-    // FETCH CROPS BY BATCH ID
     @GetMapping("/by-batch")
     public ResponseEntity<?> getCropsByBatch(@RequestParam String batchId) {
         try {
@@ -62,7 +57,6 @@ public class CropController {
         }
     }
 
-    // UPDATE CROP
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updateCrop(@PathVariable Long id, @RequestBody Crop crop) {
         try {
@@ -80,7 +74,6 @@ public class CropController {
         }
     }
 
-    // DELETE CROP
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteCrop(@PathVariable Long id) {
         try {
@@ -99,7 +92,6 @@ public class CropController {
         }
     }
 
-    // MARK HARVESTED
     @PutMapping("/harvest/{id}")
     public ResponseEntity<?> markHarvested(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {

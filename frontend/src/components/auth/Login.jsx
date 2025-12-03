@@ -15,18 +15,36 @@ const Login = () => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(""); // Clear previous error
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
 
-    const user = await login(formData.email, formData.password);
+  const response = await login(formData.email, formData.password);
 
-    if (user) {
-      navigate('/dashboard');
-    } else {
-      setError("Invalid email or password");
+  console.log("Login response:", response);
+
+  if (response.success) {
+    const role = response.user.role;  // 👈 READ role correctly
+
+    if (role === "FARMER") {
+      navigate("/farmer-dashboard");
     }
-  };
+    else if (role === "DISTRIBUTOR") {
+      navigate("/distributor-dashboard");
+    } 
+    else if (role === "CONSUMER") {
+      navigate("/dashboard");
+    }
+    else {
+      navigate("/dashboard");
+    }
+  } 
+  else {
+    setError("Invalid email or password");
+  }
+};
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">

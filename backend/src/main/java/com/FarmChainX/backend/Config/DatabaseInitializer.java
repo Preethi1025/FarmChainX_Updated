@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Component
-@Order(1) 
+@Order(1)
 public class DatabaseInitializer implements CommandLineRunner {
 
     private final DataSource dataSource;
@@ -32,7 +32,7 @@ public class DatabaseInitializer implements CommandLineRunner {
 
             DatabaseMetaData metaData = connection.getMetaData();
 
-            ResultSet tables = metaData.getTables(null, null, "crops", new String[]{"TABLE"});
+            ResultSet tables = metaData.getTables(null, null, "crops", new String[] { "TABLE" });
 
             if (tables.next()) {
                 System.out.println("➡ Existing crops table detected. Checking structure...");
@@ -47,11 +47,11 @@ public class DatabaseInitializer implements CommandLineRunner {
                 try (Statement stmt = connection.createStatement()) {
 
                     String[][] requiredColumns = {
-                            {"crop_type", "VARCHAR(255)"},
-                            {"quality_grade", "VARCHAR(50)"},
-                            {"location", "VARCHAR(255)"},
-                            {"actual_harvest_date", "VARCHAR(255)"},
-                            {"qr_code_url", "TEXT"}
+                            { "crop_type", "VARCHAR(255)" },
+                            { "quality_grade", "VARCHAR(50)" },
+                            { "location", "VARCHAR(255)" },
+                            { "actual_harvest_date", "VARCHAR(255)" },
+                            { "qr_code_url", "TEXT" }
                     };
 
                     for (String[] col : requiredColumns) {
@@ -78,7 +78,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             }
 
             // Check if listings table exists
-            ResultSet listingsTables = metaData.getTables(null, null, "listings", new String[]{"TABLE"});
+            ResultSet listingsTables = metaData.getTables(null, null, "listings", new String[] { "TABLE" });
             if (!listingsTables.next()) {
                 System.out.println(" Listings table not found — creating new table...");
                 try (Statement stmt = connection.createStatement()) {
@@ -90,7 +90,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             }
 
             // Check if batch_records table exists
-            ResultSet batchTables = metaData.getTables(null, null, "batch_records", new String[]{"TABLE"});
+            ResultSet batchTables = metaData.getTables(null, null, "batch_records", new String[] { "TABLE" });
             if (!batchTables.next()) {
                 System.out.println(" Batch records table not found — creating new table...");
                 try (Statement stmt = connection.createStatement()) {
@@ -158,20 +158,21 @@ public class DatabaseInitializer implements CommandLineRunner {
 
     private void createBatchRecordsTable(Statement stmt) throws Exception {
         String sql = """
-                CREATE TABLE IF NOT EXISTS batch_records (
+                                CREATE TABLE IF NOT EXISTS batch_records (
                     batch_id VARCHAR(255) PRIMARY KEY,
-                    farmer_id VARCHAR(255) NOT NULL,
+                    farmer_id VARCHAR(255),
                     crop_type VARCHAR(255),
-                    total_quantity DOUBLE,
-                    avg_quality_score DOUBLE,
-                    harvest_date TIMESTAMP NULL,
-                    status VARCHAR(50) DEFAULT 'PLANTED',
-                    qr_code_url TEXT,
+                    total_quantity DECIMAL(12,2),
+                    remaining_quantity DECIMAL(12,2) DEFAULT 0,
+                    lifecycle_status VARCHAR(50) DEFAULT 'PLANTED',
+                    avg_quality_score DECIMAL(5,2),
+                    harvest_date DATE,
+                    qr_code_url VARCHAR(1024),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    INDEX idx_farmer_id (farmer_id)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-                """;
+                    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+                );
+
+                                """;
 
         stmt.execute(sql);
     }
