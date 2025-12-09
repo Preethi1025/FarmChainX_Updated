@@ -5,6 +5,7 @@ import com.FarmChainX.backend.Model.Crop;
 import com.FarmChainX.backend.Model.Listing;
 import com.FarmChainX.backend.Repository.BatchRecordRepository;
 import com.FarmChainX.backend.Repository.CropRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -105,18 +106,18 @@ public class BatchService {
     // ---------------------------------------------------------------------
     // REJECT BATCH
     // ---------------------------------------------------------------------
-    public BatchRecord rejectBatch(String batchId, String distributorId, String reason) {
-
-        BatchRecord batch = batchRecordRepository.findById(batchId)
-                .orElseThrow(() -> new RuntimeException("Batch not found"));
-
-        batch.setStatus("REJECTED");
-        batch.setDistributorId(distributorId);
-        batch.setRejectReason(reason);
-        batch.setUpdatedAt(LocalDateTime.now());
-
-        return batchRecordRepository.save(batch);
-    }
+//    public BatchRecord rejectBatch(String batchId, String distributorId, String reason) {
+//
+//        BatchRecord batch = batchRecordRepository.findById(batchId)
+//                .orElseThrow(() -> new RuntimeException("Batch not found"));
+//
+//        batch.setStatus("REJECTED");
+//        batch.setDistributorId(distributorId);
+//        batch.setRejectReason(reason);
+//        batch.setUpdatedAt(LocalDateTime.now());
+//
+//        return batchRecordRepository.save(batch);
+//    }
 
     // ---------------------------------------------------------------------
     // PROCESS DAILY HARVEST (MARK CROPS READY_FOR_HARVEST -> HARVESTED BATCH)
@@ -210,5 +211,17 @@ public class BatchService {
 
         return batchRecordRepository.save(batch);
     }
+    public BatchRecord rejectBatch(String batchId, String distributorId) {
+        BatchRecord batch = batchRecordRepository.findById(batchId)
+                .orElseThrow(() -> new RuntimeException("Batch not found"));
+
+        batch.setStatus("REJECTED");
+        batch.setRejectedBy(distributorId);
+        batch.setBlocked(true); // block crop
+
+        return batchRecordRepository.save(batch);
+    }
+
+
 
 }

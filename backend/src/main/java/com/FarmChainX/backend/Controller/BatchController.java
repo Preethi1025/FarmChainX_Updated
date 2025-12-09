@@ -71,14 +71,14 @@ public class BatchController {
     // -------------------------------------------
     // Distributor REJECT
     // -------------------------------------------
-    @PutMapping("/distributor/reject/{batchId}/{distributorId}")
-    public ResponseEntity<?> rejectBatch(
-            @PathVariable String batchId,
-            @PathVariable String distributorId,
-            @RequestBody Map<String, String> body) {
-
-        return ResponseEntity.ok(batchService.rejectBatch(batchId, distributorId, body.get("reason")));
-    }
+//    @PutMapping("/distributor/reject/{batchId}/{distributorId}")
+//    public ResponseEntity<?> rejectBatch(
+//            @PathVariable String batchId,
+//            @PathVariable String distributorId,
+//            @RequestBody Map<String, String> body) {
+//
+//        return ResponseEntity.ok(batchService.rejectBatch(batchId, distributorId));
+//    }
     @PutMapping("/{batchId}/status")
     public ResponseEntity<?> updateBatchStatus(
             @PathVariable String batchId,
@@ -88,5 +88,12 @@ public class BatchController {
         BatchRecord batch = batchService.updateStatus(batchId, status);
         return ResponseEntity.ok(batch);
     }
+    @PutMapping("/distributor/reject/{batchId}/{distributorId}")
+    public ResponseEntity<BatchRecord> rejectBatch(
+            @PathVariable String batchId,
+            @PathVariable String distributorId) {
+        return ResponseEntity.ok(batchService.rejectBatch(batchId, distributorId));
+    }
+
 
 }

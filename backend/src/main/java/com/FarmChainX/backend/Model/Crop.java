@@ -15,6 +15,17 @@ public class Crop {
     @Column(name = "farmer_id")
     private String farmerId;
 
+    @Column(name = "is_blocked")
+    private Boolean blocked = false;
+
+    public boolean isBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(boolean blocked) {
+        this.blocked = blocked;
+    }
+
     @Column(name = "batch_id")
     private String batchId;
 
@@ -89,6 +100,14 @@ public class Crop {
 
     public String getCropName() {
         return cropName;
+    }
+
+    public Boolean getBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(Boolean blocked) {
+        this.blocked = blocked;
     }
 
     public void setCropName(String cropName) {

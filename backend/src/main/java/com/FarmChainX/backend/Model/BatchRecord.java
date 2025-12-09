@@ -16,7 +16,7 @@ public class BatchRecord {
     private String farmerId;
 
     @Column(name = "distributor_id")
-    private String distributorId; // <-- Added distributor
+    private String distributorId;
 
     @Column(name = "crop_type")
     private String cropType;
@@ -31,10 +31,17 @@ public class BatchRecord {
     private LocalDate harvestDate;
 
     @Column(name = "status", nullable = false)
-    private String status="PLANTED";
+    private String status = "PLANTED";
+
+    // Use Boolean instead of primitive boolean to allow null values from DB
+    @Column(name = "is_blocked")
+    private Boolean blocked = false;
+
+    @Column(name = "rejected_by")
+    private String rejectedBy;
 
     @Column(name = "reject_reason")
-    private String rejectReason; // <-- Added rejection reason
+    private String rejectReason;
 
     @Column(name = "qr_code_url")
     private String qrCodeUrl;
@@ -45,13 +52,11 @@ public class BatchRecord {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    /** AUTO SET CREATED & UPDATED TIMESTAMPS */
+    // ---------------- AUTO SETTERS FOR TIMESTAMPS ----------------
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-
     // ---------------- GETTERS & SETTERS ----------------
-
     public String getBatchId() { return batchId; }
     public void setBatchId(String batchId) { this.batchId = batchId; }
 
@@ -75,6 +80,12 @@ public class BatchRecord {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Boolean getBlocked() { return blocked; }
+    public void setBlocked(Boolean blocked) { this.blocked = blocked; }
+
+    public String getRejectedBy() { return rejectedBy; }
+    public void setRejectedBy(String rejectedBy) { this.rejectedBy = rejectedBy; }
 
     public String getRejectReason() { return rejectReason; }
     public void setRejectReason(String rejectReason) { this.rejectReason = rejectReason; }
