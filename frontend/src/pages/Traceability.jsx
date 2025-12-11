@@ -1,317 +1,168 @@
-import React from 'react'
-import { useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import {
-  MapPin,
-  Calendar,
-  CheckCircle,
-  Clock,
-  Truck,
-  Package,
-  Sprout,
-  Shield,
-  Star
-} from 'lucide-react'
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import API from '../api';
+import { CheckCircle, Clock, MapPin, User, Leaf, PackageSearch } from 'lucide-react';
 
 const Traceability = () => {
-  const { batchId } = useParams()
+  const { batchId } = useParams();
+  const [trace, setTrace] = useState([]);
+  const [farmerId, setFarmerId] = useState(null);
+  const [cropName, setCropName] = useState(null);
+  const [distributorId, setDistributorId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock traceability data
-  const traceData = {
-    batchId: batchId || 'BCH_2024_001',
-    product: 'Organic Cherry Tomatoes',
-    farmer: {
-      name: 'Green Valley Farms',
-      location: 'Salinas, CA',
-      rating: 4.8,
-      certified: true
-    },
-    quality: {
-      grade: 'A',
-      confidence: 95,
-      notes: 'Excellent color and firmness'
-    },
-    timeline: [
-      {
-        stage: 'Planting',
-        date: '2023-10-15',
-        status: 'completed',
-        details: 'Seeds planted in prepared soil',
-        location: 'Field 4B'
-      },
-      {
-        stage: 'Growing',
-        date: '2023-11-20',
-        status: 'completed',
-        details: 'Regular organic fertilization',
-        location: 'Field 4B'
-      },
-      {
-        stage: 'Harvesting',
-        date: '2024-01-15',
-        status: 'completed',
-        details: 'Hand-picked at optimal ripeness',
-        location: 'Field 4B'
-      },
-      {
-        stage: 'Quality Check',
-        date: '2024-01-16',
-        status: 'completed',
-        details: 'AI grading completed - Grade A',
-        location: 'Processing Center'
-      },
-      {
-        stage: 'Packaging',
-        date: '2024-01-17',
-        status: 'completed',
-        details: 'Packaged in eco-friendly containers',
-        location: 'Processing Center'
-      },
-      {
-        stage: 'Shipping',
-        date: '2024-01-18',
-        status: 'current',
-        details: 'In transit to distribution center',
-        location: 'Route 101'
-      },
-      {
-        stage: 'Delivery',
-        date: '2024-01-20',
-        status: 'upcoming',
-        details: 'Estimated delivery',
-        location: 'Local Market'
+  useEffect(() => {
+    const fetchTrace = async () => {
+      try {
+        const res = await API.get(`/batches/${batchId}/trace`);
+        setFarmerId(res.data.farmerId);
+        setCropName(res.data.cropType || "Not Available");
+        setDistributorId(res.data.distributorId || "Not Assigned");
+        setTrace(res.data.traces || []);
+      } catch (e) {
+        console.error("Error fetching trace:", e);
+      } finally {
+        setLoading(false);
       }
-    ],
-    certifications: [
-      'USDA Organic',
-      'Non-GMO Project Verified',
-      'California Certified Organic Farmers',
-      'Fair Trade Certified'
-    ],
-    environmental: {
-      waterSaved: '15,000L',
-      co2Reduced: '2.3 tons',
-      soilHealth: 'Excellent'
-    }
-  }
+    };
+    fetchTrace();
+  }, [batchId]);
+
+  if (loading) return <div className="text-center py-10 text-lg">Loading...</div>;
+
+  // ✨ Beautiful date-time formatter
+  const formatDateTime = (isoDate) => {
+    const date = new Date(isoDate);
+    return date.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).replace(",", " ·");
+  };
 
   const getStatusIcon = (status) => {
-    switch (status) {
-      case 'completed': return CheckCircle;
-      case 'current': return Clock;
-      case 'upcoming': return Clock;
+    switch (status.toLowerCase()) {
+      case "planted": return Leaf;
+      case "growing": return Clock;
+      case "ready_for_harvest": return PackageSearch;
+      case "harvested": return CheckCircle;
+      case "listed": return Clock;
+      case "sold": return CheckCircle;
       default: return Clock;
     }
-  }
+  };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return 'text-green-600 bg-green-100';
-      case 'current': return 'text-blue-600 bg-blue-100';
-      case 'upcoming': return 'text-gray-400 bg-gray-100';
-      default: return 'text-gray-400 bg-gray-100';
+    switch (status.toLowerCase()) {
+      case "planted": return "bg-green-100 text-green-700";
+      case "growing": return "bg-blue-100 text-blue-700";
+      case "ready_for_harvest": return "bg-yellow-100 text-yellow-700";
+      case "harvested": return "bg-green-200 text-green-800";
+      case "listed": return "bg-purple-100 text-purple-700";
+      case "sold": return "bg-gray-200 text-gray-700";
+      default: return "bg-gray-100 text-gray-500";
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-10">
+      <div className="max-w-4xl mx-auto px-4">
+
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Product Journey
-          </h1>
-          <p className="text-gray-600">
-            Track your food from farm to table with complete transparency
+        <div className="bg-gradient-to-r from-green-600 to-green-400 text-white rounded-2xl p-6 shadow-lg mb-8">
+          <h1 className="text-3xl font-bold">Batch Traceability</h1>
+          <p className="text-sm opacity-80 mt-1 tracking-wide">
+            Batch ID: <span className="font-semibold">{batchId}</span>
           </p>
-        </motion.div>
-
-        {/* Product Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8"
-        >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center space-x-4 mb-4 lg:mb-0">
-              <div className="text-4xl">🍅</div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {traceData.product}
-                </h2>
-                <p className="text-gray-600">Batch: {traceData.batchId}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-center">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor('completed')}`}>
-                  Grade {traceData.quality.grade}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {traceData.quality.confidence}% confidence
-                </p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Timeline */}
-          <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                Product Journey Timeline
-              </h3>
-              
-              <div className="space-y-6">
-                {traceData.timeline.map((step, index) => {
-                  const Icon = getStatusIcon(step.status)
-                  return (
-                    <motion.div
-                      key={step.stage}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex space-x-4"
-                    >
-                      {/* Timeline line */}
-                      <div className="flex flex-col items-center">
-                        <div className={`p-2 rounded-full ${getStatusColor(step.status)}`}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        {index < traceData.timeline.length - 1 && (
-                          <div className="w-0.5 h-full bg-gray-200 mt-2"></div>
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 pb-6">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-gray-900">
-                            {step.stage}
-                          </h4>
-                          <span className="text-sm text-gray-500">
-                            {step.date}
-                          </span>
-                        </div>
-                        <p className="text-gray-600 text-sm mb-2">
-                          {step.details}
-                        </p>
-                        <div className="flex items-center space-x-1 text-sm text-gray-500">
-                          <MapPin className="h-3 w-3" />
-                          <span>{step.location}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Farmer Info */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Farmer Information
-              </h3>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-emerald-200 rounded-xl flex items-center justify-center">
-                  <Sprout className="h-6 w-6 text-primary-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">
-                    {traceData.farmer.name}
-                  </h4>
-                  <div className="flex items-center space-x-1 text-sm text-gray-600">
-                    <MapPin className="h-3 w-3" />
-                    <span>{traceData.farmer.location}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-1">
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span>{traceData.farmer.rating}</span>
-                </div>
-                {traceData.farmer.certified && (
-                  <div className="flex items-center space-x-1 text-green-600">
-                    <Shield className="h-4 w-4" />
-                    <span>Verified</span>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Certifications */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Certifications
-              </h3>
-              <div className="space-y-2">
-                {traceData.certifications.map((cert, index) => (
-                  <div
-                    key={cert}
-                    className="flex items-center space-x-2 text-sm text-gray-600"
-                  >
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>{cert}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Environmental Impact */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-2xl p-6"
-            >
-              <h3 className="text-lg font-semibold mb-4">
-                Environmental Impact
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <div className="text-2xl font-bold">{traceData.environmental.waterSaved}</div>
-                  <div className="text-green-100 text-sm">Water Saved</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{traceData.environmental.co2Reduced}</div>
-                  <div className="text-green-100 text-sm">CO₂ Reduced</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{traceData.environmental.soilHealth}</div>
-                  <div className="text-green-100 text-sm">Soil Health</div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
         </div>
+
+        {/* Info Cards */}
+        <div className="grid md:grid-cols-3 gap-5 mb-8">
+
+          {/* Farmer */}
+          <div className="bg-white shadow-md rounded-xl p-5 flex items-center space-x-4 border border-gray-200">
+            <div className="p-3 bg-green-100 rounded-full">
+              <User className="text-green-700" size={28} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Farmer ID</p>
+              <p className="text-lg font-semibold">{farmerId}</p>
+            </div>
+          </div>
+
+          {/* Crop */}
+          <div className="bg-white shadow-md rounded-xl p-5 flex items-center space-x-4 border border-gray-200">
+            <div className="p-3 bg-yellow-100 rounded-full">
+              <Leaf className="text-yellow-700" size={28} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Crop Type</p>
+              <p className="text-lg font-semibold">{cropName}</p>
+            </div>
+          </div>
+
+          {/* Distributor */}
+          <div className="bg-white shadow-md rounded-xl p-5 flex items-center space-x-4 border border-gray-200">
+            <div className="p-3 bg-purple-100 rounded-full">
+              <PackageSearch className="text-purple-700" size={28} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Distributor ID</p>
+              <p className="text-lg font-semibold">{distributorId}</p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Timeline */}
+        <div className="relative border-l-4 border-green-300 ml-6">
+          {trace.map((step, i) => {
+            const Icon = getStatusIcon(step.status);
+            return (
+              <div key={i} className="mb-10 ml-6 relative">
+                <div className={`absolute -left-9 top-0 p-3 rounded-full shadow ${getStatusColor(step.status)}`}>
+                  <Icon size={20} />
+                </div>
+
+                <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold capitalize text-gray-800">
+                      {step.status.replaceAll('_', ' ')}
+                    </h3>
+                    <span className="text-xs text-gray-500 font-medium">
+                      {formatDateTime(step.timestamp)}
+                    </span>
+                  </div>
+
+                  {step.changedBy && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      <User className="inline h-4 w-4 mr-1 text-gray-400" />
+                      Updated by: {step.changedBy}
+                    </p>
+                  )}
+
+                  {step.location && (
+                    <p className="text-sm text-gray-600 mt-1 flex items-center">
+                      <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                      {step.location}
+                    </p>
+                  )}
+
+                  {step.remarks && (
+                    <p className="text-sm text-gray-600 mt-2">{step.remarks}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Traceability
+export default Traceability;

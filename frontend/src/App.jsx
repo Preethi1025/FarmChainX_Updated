@@ -15,8 +15,6 @@ import Footer from "./components/common/Footer";
 import Home from "./pages/Home";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-import Dashboard from "./pages/Dashboard";
-import DistributorDashboard from "./components/Distributor/DistributorDashboard";
 
 import Marketplace from "./pages/Marketplace";
 import Traceability from "./pages/Traceability";
@@ -27,7 +25,7 @@ import AdminRegister from "./pages/admin/AdminRegister";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
 import { PageLoader } from "./components/common/LoadingSpinner";
-
+import DashboardWrapper from './pages/DashboardWrapper'; // role-based dashboard wrapper
 
 // --------------------------------------------
 // Protected Route for Normal Users
@@ -48,7 +46,6 @@ function ProtectedAdminRoute({ children }) {
   return admin?.role === "ADMIN" ? children : <Navigate to="/admin/login" />;
 }
 
-
 // --------------------------------------------
 // App Content Wrapper
 // --------------------------------------------
@@ -64,37 +61,31 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Admin Auth Pages */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/register" element={<AdminRegister />} />
-
-          {/* Admin Dashboard */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedAdminRoute>
-                <AdminDashboard />
-              </ProtectedAdminRoute>
-            }
-          />
-
           {/* Farmer Dashboard */}
           <Route
             path="/dashboard"
             element={
               <ProtectedUserRoute>
-                <Dashboard />
+                <DashboardWrapper />
               </ProtectedUserRoute>
             }
           />
 
-          {/* Distributor Dashboard */}
+          {/* Other Routes */}
           <Route
-            path="/distributor-dashboard"
+            path="/marketplace"
             element={
-              <ProtectedUserRoute>
-                <DistributorDashboard />
-              </ProtectedUserRoute>
+              <ProtectedRoute>
+                <Marketplace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trace/:batchId"
+            element={
+              <ProtectedRoute>
+                <Traceability />
+              </ProtectedRoute>
             }
           />
 
@@ -111,7 +102,6 @@ function AppContent() {
     </div>
   );
 }
-
 
 // --------------------------------------------
 // Main App Wrapper with Auth Provider

@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import {
-  Search,
-  Filter,
-  Star,
-  MapPin,
-  Calendar,
-  Sprout,
-  Scan,
-  ShoppingCart
-} from 'lucide-react';
-
+import { Scan, Sprout, ShoppingCart } from 'lucide-react';
 import QRScanner from '../components/common/QRScanner';
 
 const Marketplace = () => {
@@ -23,13 +13,7 @@ const Marketplace = () => {
     try {
       const res = await axios.get("http://localhost:8080/api/listings/");
       console.log("📦 Marketplace Data:", res.data);
-
-      if (Array.isArray(res.data)) {
-        setProducts(res.data);
-      } else {
-        setProducts([]);
-      }
-
+      setProducts(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Error loading listings:", error);
     } finally {
@@ -62,7 +46,6 @@ const Marketplace = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
@@ -89,18 +72,45 @@ const Marketplace = () => {
             </p>
           ) : (
             products.map((product) => (
-              <motion.div key={product.listingId} className="card-hover bg-white rounded-xl shadow p-4">
+              <motion.div key={product.listingId} className="card-hover bg-white rounded-xl shadow p-4 flex flex-col justify-between">
 
-                <div className="h-40 bg-green-100 flex items-center justify-center rounded-lg mb-3">
-                  🌿
+                <div>
+                  <div className="h-40 bg-green-100 flex items-center justify-center rounded-lg mb-3 text-4xl">
+                    🌿
+                  </div>
+
+                  <h2 className="text-lg font-semibold capitalize">{product.cropName}</h2>
+                  <p className="text-sm text-gray-600">Farmer: {product.farmerId}</p>
+                  <p className="mt-2 text-xl font-bold text-green-700">₹{product.price}</p>
+                  <p className="text-sm text-gray-500">Available: {product.quantity} kg</p>
+                  <p className={`text-xs mt-1 px-2 py-1 inline-block rounded ${getQualityColor(product.qualityGrade)}`}>
+                    Grade: {product.qualityGrade || "Not Graded"}
+                  </p>
                 </div>
 
-                <h2 className="text-lg font-semibold capitalize">{product.cropName}</h2>
+                {/* Buttons */}
+                <div className="mt-4 flex space-x-2">
+                  <button className="btn-primary flex-1 flex items-center justify-center space-x-2">
+                    <ShoppingCart className="h-4 w-4" />
+                    <span>Add to Cart</span>
+                  </button>
 
-                <p className="text-sm text-gray-600">
-                  Farmer: {product.farmerId}
-                </p>
+                  <button
+                    className="btn-outline flex-1 flex items-center justify-center space-x-2"
+                    onClick={() => {
+                      if (product.traceUrl) {
+                        window.open(product.traceUrl, "_blank");
+                      } else {
+                        alert("Traceability URL not available");
+                      }
+                    }}
+                  >
+                    <Sprout className="h-4 w-4" />
+                    <span>Trace</span>
+                  </button>
+                </div>
 
+<<<<<<< HEAD
                 <p className="mt-2 text-xl font-bold text-green-700">
   ₹{product.price} <span className="text-sm text-gray-600">/ kg</span>
 </p>
@@ -115,16 +125,15 @@ const Marketplace = () => {
                 </p>
 
                 <button className="btn-primary w-full mt-4">Add to Cart</button>
+=======
+>>>>>>> 33ebfebde6af206b77118014d27637b9ee404f76
               </motion.div>
             ))
-
           )}
         </motion.div>
       </div>
 
-      {showScanner && (
-        <QRScanner onScan={() => setShowScanner(false)} onClose={() => setShowScanner(false)} />
-      )}
+      {showScanner && <QRScanner onScan={() => setShowScanner(false)} onClose={() => setShowScanner(false)} />}
     </div>
   );
 };

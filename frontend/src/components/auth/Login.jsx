@@ -23,22 +23,22 @@ const handleSubmit = async (e) => {
 
   console.log("Login response:", response);
 
-  if (response.success) {
-    const role = response.user.role;  // 👈 READ role correctly
+ if (response.success) {
+  const role = response.user.role;
 
-    if (role === "FARMER") {
-      navigate("/farmer-dashboard");
-    }
-    else if (role === "DISTRIBUTOR") {
-      navigate("/distributor-dashboard");
-    } 
-    else if (role === "CONSUMER") {
-      navigate("/dashboard");
-    }
-    else {
-      navigate("/dashboard");
-    }
-  } 
+  // Store role in localStorage
+  localStorage.setItem("userRole", role);
+
+  if (role === "FARMER") {
+    navigate("/farmer-dashboard");
+  } else if (role === "DISTRIBUTOR") {
+    navigate("/distributor-dashboard");
+  } else if (role === "CONSUMER") {
+    navigate("/dashboard");
+  } else {
+    navigate("/dashboard");
+  }
+}
   else {
     setError("Invalid email or password");
   }
