@@ -10,14 +10,11 @@ import Home from "./pages/Home";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
 
-import Dashboard from "./pages/Dashboard"; // Farmer Dashboard
-import DistributorDashboard from "./components/Distributor/DistributorDashboard"; // NEW Import
-
 import Marketplace from "./pages/Marketplace";
 import Traceability from "./pages/Traceability";
 
 import { PageLoader } from "./components/common/LoadingSpinner";
-
+import DashboardWrapper from './pages/DashboardWrapper'; // role-based dashboard wrapper
 
 // --------------------------------------------
 // Protected Route Wrapper
@@ -29,7 +26,6 @@ const ProtectedRoute = ({ children }) => {
 
   return user ? children : <Navigate to="/login" />;
 };
-
 
 // --------------------------------------------
 // Main App Content
@@ -46,29 +42,33 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Farmer Dashboard */}
+          {/* Role-based Dashboard */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Distributor Dashboard */}
-          <Route
-            path="/distributor-dashboard"
-            element={
-              <ProtectedRoute>
-                <DistributorDashboard />
+                <DashboardWrapper />
               </ProtectedRoute>
             }
           />
 
           {/* Other Routes */}
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/trace/:batchId" element={<Traceability />} />
+          <Route
+            path="/marketplace"
+            element={
+              <ProtectedRoute>
+                <Marketplace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trace/:batchId"
+            element={
+              <ProtectedRoute>
+                <Traceability />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Redirect All Unknown Paths */}
           <Route path="*" element={<Navigate to="/" />} />
@@ -79,7 +79,6 @@ function AppContent() {
     </div>
   );
 }
-
 
 // --------------------------------------------
 // App Wrapper With AuthProvider

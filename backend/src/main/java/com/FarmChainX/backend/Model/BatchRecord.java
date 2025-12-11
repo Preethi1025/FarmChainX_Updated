@@ -12,8 +12,16 @@ public class BatchRecord {
     @Column(name = "batch_id", nullable = false, unique = true)
     private String batchId;
 
+    @ManyToOne
+    @JoinColumn(name = "batch_id", referencedColumnName = "batch_id", insertable = false, updatable = false)
+    private Crop crop;
+    public Crop getCrop() { return crop; }
+
+
     @Column(name = "farmer_id")
     private String farmerId;
+
+
 
     @Column(name = "distributor_id")
     private String distributorId;
@@ -95,4 +103,6 @@ public class BatchRecord {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+
 }
