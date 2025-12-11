@@ -8,15 +8,26 @@ import java.time.LocalDateTime;
 public class Crop {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "crop_id")
     private Long cropId;
 
     @Column(name = "farmer_id")
-    private String farmerId; 
+    private String farmerId;
+
+    @Column(name = "is_blocked")
+    private Boolean blocked = false;
+
+    public boolean isBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(boolean blocked) {
+        this.blocked = blocked;
+    }
 
     @Column(name = "batch_id")
-    private String batchId; 
+    private String batchId;
 
     @Column(name = "crop_name")
     private String cropName;
@@ -54,7 +65,7 @@ public class Crop {
     private String estimatedYield;
 
     @Column(name = "expected_harvest_date")
-    private String expectedHarvestDate; 
+    private String expectedHarvestDate;
 
     @Column(name = "actual_harvest_date")
     private String actualHarvestDate;
@@ -89,6 +100,14 @@ public class Crop {
 
     public String getCropName() {
         return cropName;
+    }
+
+    public Boolean getBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(Boolean blocked) {
+        this.blocked = blocked;
     }
 
     public void setCropName(String cropName) {

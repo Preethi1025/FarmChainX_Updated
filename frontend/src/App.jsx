@@ -9,12 +9,19 @@ import Footer from "./components/common/Footer";
 import Home from "./pages/Home";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-import Dashboard from "./pages/Dashboard";
+
+import Dashboard from "./pages/Dashboard"; // Farmer Dashboard
+import DistributorDashboard from "./components/Distributor/DistributorDashboard"; // NEW Import
+
 import Marketplace from "./pages/Marketplace";
 import Traceability from "./pages/Traceability";
 
 import { PageLoader } from "./components/common/LoadingSpinner";
 
+
+// --------------------------------------------
+// Protected Route Wrapper
+// --------------------------------------------
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
@@ -23,6 +30,10 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
+
+// --------------------------------------------
+// Main App Content
+// --------------------------------------------
 function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
@@ -30,11 +41,12 @@ function AppContent() {
 
       <main>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Home />} />
-
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
+          {/* Farmer Dashboard */}
           <Route
             path="/dashboard"
             element={
@@ -44,9 +56,21 @@ function AppContent() {
             }
           />
 
+          {/* Distributor Dashboard */}
+          <Route
+            path="/distributor-dashboard"
+            element={
+              <ProtectedRoute>
+                <DistributorDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Other Routes */}
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/trace/:batchId" element={<Traceability />} />
 
+          {/* Redirect All Unknown Paths */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
@@ -56,6 +80,10 @@ function AppContent() {
   );
 }
 
+
+// --------------------------------------------
+// App Wrapper With AuthProvider
+// --------------------------------------------
 function App() {
   return (
     <AuthProvider>

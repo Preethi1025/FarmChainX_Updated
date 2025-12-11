@@ -58,7 +58,7 @@ public class CropService {
             crop.setQrCodeUrl(frontendBase + "/trace/" + batchId);
         }
 
-        Crop saved = cropRepository.save(crop);  
+        Crop saved = cropRepository.save(crop);
 
         if (!batchRecordRepository.existsById(batchId)) {
             BatchRecord record = new BatchRecord();
