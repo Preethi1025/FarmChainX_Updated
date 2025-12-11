@@ -178,7 +178,7 @@ const Dashboard = () => {
                   <div className="text-right">
                     <div className="font-medium mb-2">
                       Qty: {crop.quantity} <br />
-                      Price: ₹{crop.price}
+                      Price: ₹{crop.price} / kg
                     </div>
                     <button
                       onClick={() => { setSelectedCropForListing({ ...crop, farmerId: user.id }); setShowListingModal(true); }}

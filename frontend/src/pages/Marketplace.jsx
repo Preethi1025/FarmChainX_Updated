@@ -102,8 +102,9 @@ const Marketplace = () => {
                 </p>
 
                 <p className="mt-2 text-xl font-bold text-green-700">
-                  ₹{product.price}
-                </p>
+  ₹{product.price} <span className="text-sm text-gray-600">/ kg</span>
+</p>
+
 
                 <p className="text-sm text-gray-500">
                   Available: {product.quantity} kg

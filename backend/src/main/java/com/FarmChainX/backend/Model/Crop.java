@@ -18,14 +18,6 @@ public class Crop {
     @Column(name = "is_blocked")
     private Boolean blocked = false;
 
-    public boolean isBlocked() {
-        return blocked;
-    }
-
-    public void setBlocked(boolean blocked) {
-        this.blocked = blocked;
-    }
-
     @Column(name = "batch_id")
     private String batchId;
 
@@ -82,6 +74,8 @@ public class Crop {
     @Column(columnDefinition = "TEXT")
     private String traceLog;
 
+    // ---------- getters / setters ----------
+
     public Long getCropId() {
         return cropId;
     }
@@ -98,10 +92,7 @@ public class Crop {
         this.farmerId = farmerId;
     }
 
-    public String getCropName() {
-        return cropName;
-    }
-
+    // Updated blocked getter/setter to use Boolean consistently
     public Boolean getBlocked() {
         return blocked;
     }
@@ -110,151 +101,71 @@ public class Crop {
         this.blocked = blocked;
     }
 
+    public String getCropName() {
+        return cropName;
+    }
+
     public void setCropName(String cropName) {
         this.cropName = cropName;
     }
 
-    public String getPrice() {
-        return price;
-    }
+    public String getPrice() { return price; }
+    public void setPrice(String price) { this.price = price; }
 
-    public void setPrice(String price) {
-        this.price = price;
-    }
+    public String getQuantity() { return quantity; }
+    public void setQuantity(String quantity) { this.quantity = quantity; }
 
-    public String getQuantity() {
-        return quantity;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setQuantity(String quantity) {
-        this.quantity = quantity;
-    }
+    public String getBatchId() { return batchId; }
+    public void setBatchId(String batchId) { this.batchId = batchId; }
 
-    public String getDescription() {
-        return description;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    public String getBatchId() {
-        return batchId;
-    }
+    public String getCropType() { return cropType; }
+    public void setCropType(String cropType) { this.cropType = cropType; }
 
-    public void setBatchId(String batchId) {
-        this.batchId = batchId;
-    }
+    public String getVariety() { return variety; }
+    public void setVariety(String variety) { this.variety = variety; }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+    public String getQrCodeUrl() { return qrCodeUrl; }
+    public void setQrCodeUrl(String qrCodeUrl) { this.qrCodeUrl = qrCodeUrl; }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
+    public String getQualityGrade() { return qualityGrade; }
+    public void setQualityGrade(String qualityGrade) { this.qualityGrade = qualityGrade; }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public String getCropType() {
-        return cropType;
-    }
+    public String getActualYield() { return actualYield; }
+    public void setActualYield(String actualYield) { this.actualYield = actualYield; }
 
-    public void setCropType(String cropType) {
-        this.cropType = cropType;
-    }
+    public String getEstimatedYield() { return estimatedYield; }
+    public void setEstimatedYield(String estimatedYield) { this.estimatedYield = estimatedYield; }
 
-    public String getVariety() {
-        return variety;
-    }
+    public String getExpectedHarvestDate() { return expectedHarvestDate; }
+    public void setExpectedHarvestDate(String expectedHarvestDate) { this.expectedHarvestDate = expectedHarvestDate; }
 
-    public void setVariety(String variety) {
-        this.variety = variety;
-    }
+    public String getActualHarvestDate() { return actualHarvestDate; }
+    public void setActualHarvestDate(String actualHarvestDate) { this.actualHarvestDate = actualHarvestDate; }
 
-    public String getLocation() {
-        return location;
-    }
+    public String getSowDate() { return sowDate; }
+    public void setSowDate(String sowDate) { this.sowDate = sowDate; }
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    public Double getAiConfidenceScore() { return aiConfidenceScore; }
+    public void setAiConfidenceScore(Double aiConfidenceScore) { this.aiConfidenceScore = aiConfidenceScore; }
 
-    public String getQrCodeUrl() {
-        return qrCodeUrl;
-    }
+    public String getStage() { return stage; }
+    public void setStage(String stage) { this.stage = stage; }
 
-    public void setQrCodeUrl(String qrCodeUrl) {
-        this.qrCodeUrl = qrCodeUrl;
-    }
-
-    public String getQualityGrade() {
-        return qualityGrade;
-    }
-
-    public void setQualityGrade(String qualityGrade) {
-        this.qualityGrade = qualityGrade;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getActualYield() {
-        return actualYield;
-    }
-
-    public void setActualYield(String actualYield) {
-        this.actualYield = actualYield;
-    }
-
-    public String getEstimatedYield() {
-        return estimatedYield;
-    }
-
-    public void setEstimatedYield(String estimatedYield) {
-        this.estimatedYield = estimatedYield;
-    }
-
-    public String getExpectedHarvestDate() {
-        return expectedHarvestDate;
-    }
-
-    public void setExpectedHarvestDate(String expectedHarvestDate) {
-        this.expectedHarvestDate = expectedHarvestDate;
-    }
-
-    public String getActualHarvestDate() {
-        return actualHarvestDate;
-    }
-
-    public void setActualHarvestDate(String actualHarvestDate) {
-        this.actualHarvestDate = actualHarvestDate;
-    }
-
-    public String getSowDate() {
-        return sowDate;
-    }
-
-    public void setSowDate(String sowDate) {
-        this.sowDate = sowDate;
-    }
-
-    public Double getAiConfidenceScore() {
-        return aiConfidenceScore;
-    }
-
-    public void setAiConfidenceScore(Double aiConfidenceScore) {
-        this.aiConfidenceScore = aiConfidenceScore;
-    }
+    public String getTraceLog() { return traceLog; }
+    public void setTraceLog(String traceLog) { this.traceLog = traceLog; }
 }

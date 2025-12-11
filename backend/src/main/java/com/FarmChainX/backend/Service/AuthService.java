@@ -20,16 +20,20 @@ public class AuthService {
 
         user.setId(UUID.randomUUID().toString());
 
+        // Hash password
         user.setPassword(encoder.encode(user.getPassword()));
+
+        // Default role if none provided
+        if (user.getRole() == null || user.getRole().isEmpty()) {
+            user.setRole("BUYER");
+        }
 
         return userRepository.save(user);
     }
 
     public boolean login(String email, String password) {
         User user = userRepository.findByEmail(email);
-
         if (user == null) return false;
-
         return encoder.matches(password, user.getPassword());
     }
 

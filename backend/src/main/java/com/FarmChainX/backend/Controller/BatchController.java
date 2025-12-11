@@ -23,7 +23,6 @@ public class BatchController {
         return ResponseEntity.ok(batchService.createBatch(batch));
     }
 
-
     @GetMapping("/{batchId}")
     public ResponseEntity<?> getBatch(@PathVariable String batchId) {
         return batchService.getBatch(batchId)
@@ -69,16 +68,18 @@ public class BatchController {
     }
 
     // -------------------------------------------
-    // Distributor REJECT
+    // Distributor REJECT (accepts { "reason": "..." } in body)
     // -------------------------------------------
-//    @PutMapping("/distributor/reject/{batchId}/{distributorId}")
-//    public ResponseEntity<?> rejectBatch(
-//            @PathVariable String batchId,
-//            @PathVariable String distributorId,
-//            @RequestBody Map<String, String> body) {
-//
-//        return ResponseEntity.ok(batchService.rejectBatch(batchId, distributorId));
-//    }
+    @PutMapping("/distributor/reject/{batchId}/{distributorId}")
+    public ResponseEntity<BatchRecord> rejectBatch(
+            @PathVariable String batchId,
+            @PathVariable String distributorId,
+            @RequestBody(required = false) Map<String, String> body) {
+
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(batchService.rejectBatch(batchId, distributorId, reason));
+    }
+
     @PutMapping("/{batchId}/status")
     public ResponseEntity<?> updateBatchStatus(
             @PathVariable String batchId,
@@ -88,12 +89,4 @@ public class BatchController {
         BatchRecord batch = batchService.updateStatus(batchId, status);
         return ResponseEntity.ok(batch);
     }
-    @PutMapping("/distributor/reject/{batchId}/{distributorId}")
-    public ResponseEntity<BatchRecord> rejectBatch(
-            @PathVariable String batchId,
-            @PathVariable String distributorId) {
-        return ResponseEntity.ok(batchService.rejectBatch(batchId, distributorId));
-    }
-
-
 }

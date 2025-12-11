@@ -89,37 +89,6 @@ public class BatchService {
     }
 
     // ---------------------------------------------------------------------
-    // APPROVE BATCH
-    // ---------------------------------------------------------------------
-//    public BatchRecord approveBatch(String batchId, String distributorId) {
-//
-//        BatchRecord batch = batchRecordRepository.findById(batchId)
-//                .orElseThrow(() -> new RuntimeException("Batch not found"));
-//
-//        batch.setStatus("APPROVED");
-//        batch.setDistributorId(distributorId);
-//        batch.setUpdatedAt(LocalDateTime.now());
-//
-//        return batchRecordRepository.save(batch);
-//    }
-
-    // ---------------------------------------------------------------------
-    // REJECT BATCH
-    // ---------------------------------------------------------------------
-//    public BatchRecord rejectBatch(String batchId, String distributorId, String reason) {
-//
-//        BatchRecord batch = batchRecordRepository.findById(batchId)
-//                .orElseThrow(() -> new RuntimeException("Batch not found"));
-//
-//        batch.setStatus("REJECTED");
-//        batch.setDistributorId(distributorId);
-//        batch.setRejectReason(reason);
-//        batch.setUpdatedAt(LocalDateTime.now());
-//
-//        return batchRecordRepository.save(batch);
-//    }
-
-    // ---------------------------------------------------------------------
     // PROCESS DAILY HARVEST (MARK CROPS READY_FOR_HARVEST -> HARVESTED BATCH)
     // ---------------------------------------------------------------------
     public BatchRecord processDailyHarvest(String farmerId) {
@@ -142,7 +111,13 @@ public class BatchService {
 
         // 3️⃣ Sum quantities
         double totalQty = readyCrops.stream()
-                .mapToDouble(c -> Double.parseDouble(c.getQuantity()))
+                .mapToDouble(c -> {
+                    try {
+                        return Double.parseDouble(c.getQuantity());
+                    } catch (Exception e) {
+                        return 0.0;
+                    }
+                })
                 .sum();
         batch.setTotalQuantity(totalQty);
 
@@ -151,6 +126,7 @@ public class BatchService {
             c.setBatchId(batchId);
             c.setStatus("HARVESTED");
             c.setActualHarvestDate(LocalDate.now().toString());
+            c.setUpdatedAt(LocalDateTime.now());
         }
 
         cropRepository.saveAll(readyCrops);
@@ -172,12 +148,18 @@ public class BatchService {
 
         return "FCX-" + prefix + "-" + date + "-" + random;
     }
+
     public BatchRecord updateStatus(String batchId, String status) {
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
         batch.setStatus(status);
+        batch.setUpdatedAt(LocalDateTime.now());
         return batchRecordRepository.save(batch);
     }
+
+    // ---------------------------------------------------------------------
+    // APPROVE BATCH
+    // ---------------------------------------------------------------------
     public BatchRecord approveBatch(String batchId, String distributorId) {
 
         BatchRecord batch = batchRecordRepository.findById(batchId)
@@ -190,6 +172,9 @@ public class BatchService {
         // Create listings for each crop in the batch
         List<Crop> crops = cropRepository.findByBatchId(batch.getBatchId());
         for (Crop crop : crops) {
+            // if crop is blocked or already listed -> skip
+            if (Boolean.TRUE.equals(crop.getBlocked())) continue;
+
             Listing listing = new Listing();
             listing.setBatchId(batch.getBatchId());
             listing.setFarmerId(batch.getFarmerId());
@@ -197,31 +182,66 @@ public class BatchService {
 
             // Safe parsing of quantity
             try {
-                listing.setQuantity(Double.parseDouble(crop.getQuantity()));
+                listing.setQuantity(crop.getQuantity() != null ? Double.parseDouble(crop.getQuantity()) : 0.0);
             } catch (NumberFormatException e) {
                 listing.setQuantity(0.0);
             }
 
-            // Set price (placeholder, can be calculated)
-            listing.setPrice(0.0);
+            // Try to use crop.price if present
+            try {
+                Double p = 0.0;
+                if (crop.getPrice() != null && !crop.getPrice().isBlank()) {
+                    p = Double.parseDouble(crop.getPrice());
+                }
+                listing.setPrice(p);
+            } catch (Exception e) {
+                listing.setPrice(0.0);
+            }
+
             listing.setStatus("ACTIVE");
 
-            listingService.createListing(listing);
+            try {
+                listingService.createListing(listing);
+            } catch (Exception ex) {
+                // if the listing cannot be created (already exists or DB problem), log and continue
+                System.err.println("Failed to create listing for crop " + crop.getCropId() + ": " + ex.getMessage());
+            }
         }
 
         return batchRecordRepository.save(batch);
     }
-    public BatchRecord rejectBatch(String batchId, String distributorId) {
+
+    // ---------------------------------------------------------------------
+    // REJECT BATCH
+    // ---------------------------------------------------------------------
+    public BatchRecord rejectBatch(String batchId, String distributorId, String reason) {
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
 
         batch.setStatus("REJECTED");
         batch.setRejectedBy(distributorId);
-        batch.setBlocked(true); // block crop
+        batch.setRejectReason(reason);
+        batch.setBlocked(true);
+        batch.setUpdatedAt(LocalDateTime.now());
+
+        // Block all crops in this batch
+        List<Crop> crops = cropRepository.findByBatchId(batchId);
+        if (crops != null && !crops.isEmpty()) {
+            for (Crop crop : crops) {
+                crop.setBlocked(true);
+                crop.setStatus("REJECTED");
+                crop.setUpdatedAt(LocalDateTime.now());
+            }
+            cropRepository.saveAll(crops);
+        }
+
+        // Disable any marketplace listings for this batch
+        try {
+            listingService.disableListingsForBatch(batchId);
+        } catch (Exception e) {
+            System.err.println("Failed to disable listings for batch " + batchId + ": " + e.getMessage());
+        }
 
         return batchRecordRepository.save(batch);
     }
-
-
-
 }

@@ -1,38 +1,56 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import Header from "./components/common/Header";
 import Footer from "./components/common/Footer";
 
+// User Pages
 import Home from "./pages/Home";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-
-import Dashboard from "./pages/Dashboard"; // Farmer Dashboard
-import DistributorDashboard from "./components/Distributor/DistributorDashboard"; // NEW Import
+import Dashboard from "./pages/Dashboard";
+import DistributorDashboard from "./components/Distributor/DistributorDashboard";
 
 import Marketplace from "./pages/Marketplace";
 import Traceability from "./pages/Traceability";
+
+// Admin Pages
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminRegister from "./pages/admin/AdminRegister";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 import { PageLoader } from "./components/common/LoadingSpinner";
 
 
 // --------------------------------------------
-// Protected Route Wrapper
+// Protected Route for Normal Users
 // --------------------------------------------
-const ProtectedRoute = ({ children }) => {
+function ProtectedUserRoute({ children }) {
   const { user, loading } = useAuth();
 
   if (loading) return <PageLoader />;
 
   return user ? children : <Navigate to="/login" />;
-};
+}
+
+// --------------------------------------------
+// Protected Route for Admin
+// --------------------------------------------
+function ProtectedAdminRoute({ children }) {
+  const admin = JSON.parse(localStorage.getItem("admin"));
+  return admin?.role === "ADMIN" ? children : <Navigate to="/admin/login" />;
+}
 
 
 // --------------------------------------------
-// Main App Content
+// App Content Wrapper
 // --------------------------------------------
 function AppContent() {
   return (
@@ -46,13 +64,27 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
+          {/* Admin Auth Pages */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
+
+          {/* Admin Dashboard */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedAdminRoute>
+                <AdminDashboard />
+              </ProtectedAdminRoute>
+            }
+          />
+
           {/* Farmer Dashboard */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedUserRoute>
                 <Dashboard />
-              </ProtectedRoute>
+              </ProtectedUserRoute>
             }
           />
 
@@ -60,17 +92,17 @@ function AppContent() {
           <Route
             path="/distributor-dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedUserRoute>
                 <DistributorDashboard />
-              </ProtectedRoute>
+              </ProtectedUserRoute>
             }
           />
 
-          {/* Other Routes */}
+          {/* Other pages */}
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/trace/:batchId" element={<Traceability />} />
 
-          {/* Redirect All Unknown Paths */}
+          {/* Fallback Route */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
@@ -82,7 +114,7 @@ function AppContent() {
 
 
 // --------------------------------------------
-// App Wrapper With AuthProvider
+// Main App Wrapper with Auth Provider
 // --------------------------------------------
 function App() {
   return (

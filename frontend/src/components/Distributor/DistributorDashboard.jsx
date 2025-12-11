@@ -51,10 +51,10 @@ const DistributorDashboard = () => {
       alert("Approve failed");
     }
   };
-
   // ------------------ REJECT BATCH ------------------
-  const handleReject = async (batchId, reason) => {
+  const handleReject = async (batchId) => {
     try {
+      const reason = window.prompt("Enter rejection reason (optional):", "Quality issues");
       await axios.put(
         `${API_BASE}/batches/distributor/reject/${batchId}/${distributorId}`,
         { reason }
@@ -65,6 +65,8 @@ const DistributorDashboard = () => {
       alert("Reject failed");
     }
   };
+
+
 
   if (!distributorId) return <p className="text-center mt-10">Please login as distributor.</p>;
   if (loading) return <p className="text-center mt-10">Loading...</p>;

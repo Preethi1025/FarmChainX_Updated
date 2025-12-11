@@ -12,8 +12,8 @@ const BatchCard = ({ batch, onApprove, onReject, readOnly }) => {
 
       {!readOnly && (
         <div className="mt-3 flex gap-2">
-          <button className="bg-green-500 text-white px-3 py-1 rounded" onClick={onApprove}>Approve</button>
-          <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={() => onReject("Rejected by distributor")}>Reject</button>
+          <button className="bg-green-500 text-white px-3 py-1 rounded" onClick={() => onApprove(batch.batchId)}>Approve</button>
+          <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={() => onReject(batch.batchId)}>Reject</button>
         </div>
       )}
     </div>

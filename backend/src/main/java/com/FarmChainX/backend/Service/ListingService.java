@@ -1,7 +1,5 @@
 package com.FarmChainX.backend.Service;
 
-import com.FarmChainX.backend.Model.BatchRecord;
-import com.FarmChainX.backend.Model.Crop;
 import com.FarmChainX.backend.Model.Listing;
 import com.FarmChainX.backend.Repository.ListingRepository;
 import org.springframework.stereotype.Service;
@@ -20,26 +18,20 @@ public class ListingService {
 
     public Listing createListing(Listing listing) {
 
-        if (listingRepository.existsByCropId(listing.getCropId())) {
+        if (listing.getCropId() != null && listingRepository.existsByCropId(listing.getCropId())) {
             throw new RuntimeException("This crop is already listed!");
         }
 
-        System.out.println(" Saving Listing: " + listing);
-
         if (listing.getCreatedAt() == null) {
-            listing.setCreatedAt(java.time.LocalDateTime.now());
+            listing.setCreatedAt(LocalDateTime.now());
         }
-        if (listing.getUpdatedAt() == null) {
-            listing.setUpdatedAt(java.time.LocalDateTime.now());
-        }
+        listing.setUpdatedAt(LocalDateTime.now());
 
         if (listing.getStatus() == null || listing.getStatus().isEmpty()) {
             listing.setStatus("ACTIVE");
         }
 
         Listing saved = listingRepository.save(listing);
-        System.out.println(" After Save - Listing ID: " + saved.getListingId());
-
         return saved;
     }
 
@@ -47,4 +39,17 @@ public class ListingService {
         return listingRepository.findAll();
     }
 
+    /**
+     * Disable listings for a given batch (called when distributor rejects a batch).
+     * This sets listing.status to "REMOVED" so marketplace ignores it.
+     */
+    public void disableListingsForBatch(String batchId) {
+        if (batchId == null) return;
+        List<Listing> listings = listingRepository.findByBatchId(batchId);
+        for (Listing l : listings) {
+            l.setStatus("REMOVED");
+            l.setUpdatedAt(LocalDateTime.now());
+            listingRepository.save(l);
+        }
+    }
 }
