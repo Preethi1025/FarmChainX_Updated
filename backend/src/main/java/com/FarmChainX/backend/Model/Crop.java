@@ -12,19 +12,8 @@ public class Crop {
     @Column(name = "crop_id")
     private Long cropId;
 
-    @Column(name = "farmer_id")
+    @Column(name = "farmer_id", nullable = false)
     private String farmerId;
-
-    @Column(name = "is_blocked")
-    private Boolean blocked = false;
-
-    public boolean isBlocked() {
-        return blocked;
-    }
-
-    public void setBlocked(boolean blocked) {
-        this.blocked = blocked;
-    }
 
     @Column(name = "batch_id")
     private String batchId;
@@ -34,7 +23,6 @@ public class Crop {
 
     private String price;
     private String quantity;
-
     private String description;
 
     @Column(name = "created_at")
@@ -47,7 +35,6 @@ public class Crop {
     private String cropType;
 
     private String variety;
-
     private String location;
 
     @Column(name = "qr_code_url")
@@ -82,179 +69,79 @@ public class Crop {
     @Column(columnDefinition = "TEXT")
     private String traceLog;
 
-    public Long getCropId() {
-        return cropId;
-    }
+    @Column(name = "is_blocked")
+    private Boolean blocked = false;
 
-    public void setCropId(Long cropId) {
-        this.cropId = cropId;
-    }
+    // ---------------- GETTERS & SETTERS ----------------
+    public Long getCropId() { return cropId; }
+    public void setCropId(Long cropId) { this.cropId = cropId; }
 
-    public String getFarmerId() {
-        return farmerId;
-    }
+    public String getFarmerId() { return farmerId; }
+    public void setFarmerId(String farmerId) { this.farmerId = farmerId; }
 
-    public void setFarmerId(String farmerId) {
-        this.farmerId = farmerId;
-    }
+    public String getBatchId() { return batchId; }
+    public void setBatchId(String batchId) { this.batchId = batchId; }
 
-    public String getCropName() {
-        return cropName;
-    }
+    public String getCropName() { return cropName; }
+    public void setCropName(String cropName) { this.cropName = cropName; }
 
-    public Boolean getBlocked() {
-        return blocked;
-    }
+    public String getPrice() { return price; }
+    public void setPrice(String price) { this.price = price; }
 
-    public void setBlocked(Boolean blocked) {
-        this.blocked = blocked;
-    }
+    public String getQuantity() { return quantity; }
+    public void setQuantity(String quantity) { this.quantity = quantity; }
 
-    public void setCropName(String cropName) {
-        this.cropName = cropName;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public String getPrice() {
-        return price;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setPrice(String price) {
-        this.price = price;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    public String getQuantity() {
-        return quantity;
-    }
+    public String getCropType() { return cropType; }
+    public void setCropType(String cropType) { this.cropType = cropType; }
 
-    public void setQuantity(String quantity) {
-        this.quantity = quantity;
-    }
+    public String getVariety() { return variety; }
+    public void setVariety(String variety) { this.variety = variety; }
 
-    public String getDescription() {
-        return description;
-    }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public String getQrCodeUrl() { return qrCodeUrl; }
+    public void setQrCodeUrl(String qrCodeUrl) { this.qrCodeUrl = qrCodeUrl; }
 
-    public String getBatchId() {
-        return batchId;
-    }
+    public String getQualityGrade() { return qualityGrade; }
+    public void setQualityGrade(String qualityGrade) { this.qualityGrade = qualityGrade; }
 
-    public void setBatchId(String batchId) {
-        this.batchId = batchId;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public String getActualYield() { return actualYield; }
+    public void setActualYield(String actualYield) { this.actualYield = actualYield; }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+    public String getEstimatedYield() { return estimatedYield; }
+    public void setEstimatedYield(String estimatedYield) { this.estimatedYield = estimatedYield; }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
+    public String getExpectedHarvestDate() { return expectedHarvestDate; }
+    public void setExpectedHarvestDate(String expectedHarvestDate) { this.expectedHarvestDate = expectedHarvestDate; }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public String getActualHarvestDate() { return actualHarvestDate; }
+    public void setActualHarvestDate(String actualHarvestDate) { this.actualHarvestDate = actualHarvestDate; }
 
-    public String getCropType() {
-        return cropType;
-    }
+    public String getSowDate() { return sowDate; }
+    public void setSowDate(String sowDate) { this.sowDate = sowDate; }
 
-    public void setCropType(String cropType) {
-        this.cropType = cropType;
-    }
+    public Double getAiConfidenceScore() { return aiConfidenceScore; }
+    public void setAiConfidenceScore(Double aiConfidenceScore) { this.aiConfidenceScore = aiConfidenceScore; }
 
-    public String getVariety() {
-        return variety;
-    }
+    public String getStage() { return stage; }
+    public void setStage(String stage) { this.stage = stage; }
 
-    public void setVariety(String variety) {
-        this.variety = variety;
-    }
+    public String getTraceLog() { return traceLog; }
+    public void setTraceLog(String traceLog) { this.traceLog = traceLog; }
 
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
-    public String getQrCodeUrl() {
-        return qrCodeUrl;
-    }
-
-    public void setQrCodeUrl(String qrCodeUrl) {
-        this.qrCodeUrl = qrCodeUrl;
-    }
-
-    public String getQualityGrade() {
-        return qualityGrade;
-    }
-
-    public void setQualityGrade(String qualityGrade) {
-        this.qualityGrade = qualityGrade;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getActualYield() {
-        return actualYield;
-    }
-
-    public void setActualYield(String actualYield) {
-        this.actualYield = actualYield;
-    }
-
-    public String getEstimatedYield() {
-        return estimatedYield;
-    }
-
-    public void setEstimatedYield(String estimatedYield) {
-        this.estimatedYield = estimatedYield;
-    }
-
-    public String getExpectedHarvestDate() {
-        return expectedHarvestDate;
-    }
-
-    public void setExpectedHarvestDate(String expectedHarvestDate) {
-        this.expectedHarvestDate = expectedHarvestDate;
-    }
-
-    public String getActualHarvestDate() {
-        return actualHarvestDate;
-    }
-
-    public void setActualHarvestDate(String actualHarvestDate) {
-        this.actualHarvestDate = actualHarvestDate;
-    }
-
-    public String getSowDate() {
-        return sowDate;
-    }
-
-    public void setSowDate(String sowDate) {
-        this.sowDate = sowDate;
-    }
-
-    public Double getAiConfidenceScore() {
-        return aiConfidenceScore;
-    }
-
-    public void setAiConfidenceScore(Double aiConfidenceScore) {
-        this.aiConfidenceScore = aiConfidenceScore;
-    }
+    public Boolean getBlocked() { return blocked; }
+    public void setBlocked(Boolean blocked) { this.blocked = blocked; }
 }

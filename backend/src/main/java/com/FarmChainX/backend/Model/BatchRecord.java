@@ -3,6 +3,7 @@ package com.FarmChainX.backend.Model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "batch_records")
@@ -12,16 +13,8 @@ public class BatchRecord {
     @Column(name = "batch_id", nullable = false, unique = true)
     private String batchId;
 
-    @ManyToOne
-    @JoinColumn(name = "batch_id", referencedColumnName = "batch_id", insertable = false, updatable = false)
-    private Crop crop;
-    public Crop getCrop() { return crop; }
-
-
-    @Column(name = "farmer_id")
+    @Column(name = "farmer_id", nullable = false)
     private String farmerId;
-
-
 
     @Column(name = "distributor_id")
     private String distributorId;
@@ -41,7 +34,6 @@ public class BatchRecord {
     @Column(name = "status", nullable = false)
     private String status = "PLANTED";
 
-    // Use Boolean instead of primitive boolean to allow null values from DB
     @Column(name = "is_blocked")
     private Boolean blocked = false;
 
@@ -60,9 +52,10 @@ public class BatchRecord {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // ---------------- AUTO SETTERS FOR TIMESTAMPS ----------------
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    // One batch can have multiple crops (one-to-many)
+    @OneToMany
+    @JoinColumn(name = "batch_id", referencedColumnName = "batch_id")
+    private List<Crop> crops;
 
     // ---------------- GETTERS & SETTERS ----------------
     public String getBatchId() { return batchId; }
@@ -102,7 +95,11 @@ public class BatchRecord {
     public void setQrCodeUrl(String qrCodeUrl) { this.qrCodeUrl = qrCodeUrl; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-
+    public List<Crop> getCrops() { return crops; }
+    public void setCrops(List<Crop> crops) { this.crops = crops; }
 }

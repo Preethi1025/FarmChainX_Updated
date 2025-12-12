@@ -2,12 +2,12 @@ package com.FarmChainX.backend.Controller;
 
 import com.FarmChainX.backend.Model.BatchRecord;
 import com.FarmChainX.backend.Model.BatchTrace;
-import com.FarmChainX.backend.Repository.BatchTraceRepository;
 import com.FarmChainX.backend.Service.BatchService;
+import com.FarmChainX.backend.Repository.BatchTraceRepository;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.*;
 
 @RestController
@@ -22,11 +22,13 @@ public class BatchController {
         this.batchTraceRepository = batchTraceRepository;
     }
 
+    // ------------------- CREATE BATCH -------------------
     @PostMapping
     public ResponseEntity<BatchRecord> createBatch(@RequestBody BatchRecord batch) {
         return ResponseEntity.ok(batchService.createBatch(batch));
     }
 
+    // ------------------- GET BATCH -------------------
     @GetMapping("/{batchId}")
     public ResponseEntity<?> getBatch(@PathVariable String batchId) {
         return batchService.getBatch(batchId)
@@ -34,37 +36,39 @@ public class BatchController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // ------------------- LIST BY FARMER -------------------
     @GetMapping("/farmer/{farmerId}")
     public ResponseEntity<List<BatchRecord>> getBatchesByFarmer(@PathVariable String farmerId) {
         return ResponseEntity.ok(batchService.getBatchesByFarmer(farmerId));
     }
 
+    // ------------------- CROPS FOR BATCH -------------------
     @GetMapping("/{batchId}/crops")
     public ResponseEntity<?> getCropsForBatch(@PathVariable String batchId) {
         return ResponseEntity.ok(batchService.getCropsForBatch(batchId));
     }
 
+    // ------------------- PENDING FOR DISTRIBUTOR -------------------
     @GetMapping("/pending")
     public ResponseEntity<List<Map<String, Object>>> getPendingBatches() {
         return ResponseEntity.ok(batchService.getPendingBatchesForDistributor());
     }
 
+    // ------------------- APPROVED BATCHES -------------------
     @GetMapping("/approved/{distributorId}")
     public ResponseEntity<List<Map<String, Object>>> getApprovedBatches(@PathVariable String distributorId) {
         return ResponseEntity.ok(batchService.getApprovedBatches(distributorId));
     }
 
+    // ------------------- APPROVE -------------------
     @PutMapping("/distributor/approve/{batchId}/{distributorId}")
-    public ResponseEntity<?> approveBatch(
-            @PathVariable String batchId,
-            @PathVariable String distributorId) {
+    public ResponseEntity<?> approveBatch(@PathVariable String batchId, @PathVariable String distributorId) {
         return ResponseEntity.ok(batchService.approveBatch(batchId, distributorId));
     }
 
+    // ------------------- REJECT -------------------
     @PutMapping("/distributor/reject/{batchId}/{distributorId}")
-    public ResponseEntity<BatchRecord> rejectBatch(
-            @PathVariable String batchId,
-            @PathVariable String distributorId) {
+    public ResponseEntity<BatchRecord> rejectBatch(@PathVariable String batchId, @PathVariable String distributorId) {
         return ResponseEntity.ok(batchService.rejectBatch(batchId, distributorId));
     }
 
@@ -75,15 +79,37 @@ public class BatchController {
             @RequestBody Map<String, String> body) {
 
         String status = body.get("status");
-        String userId = body.get("userId"); // get from body
-        BatchRecord batch = batchService.updateStatus(batchId, status, userId);
-        return ResponseEntity.ok(batch);
+        String userId = body.get("userId");
+        return ResponseEntity.ok(batchService.updateStatus(batchId, status, userId));
     }
 
+    // ------------------- SPLIT BATCH -------------------
+    @PostMapping("/{batchId}/split")
+    public ResponseEntity<BatchRecord> splitBatch(
+            @PathVariable String batchId,
+            @RequestBody Map<String, Object> body) {
 
-    // ------------------- GET TRACE -------------------
+        double splitQty = Double.parseDouble(body.get("quantity").toString());
+        String userId = body.get("userId").toString();
+
+        return ResponseEntity.ok(batchService.splitBatch(batchId, splitQty, userId));
+    }
+
+    // ------------------- MERGE BATCHES -------------------
+    @PostMapping("/merge/{targetBatchId}")
+    public ResponseEntity<BatchRecord> mergeBatch(
+            @PathVariable String targetBatchId,
+            @RequestBody Map<String, Object> body) {
+
+        @SuppressWarnings("unchecked")
+        List<String> sources = (List<String>) body.get("sourceBatchIds");
+        String userId = body.get("userId").toString();
+
+        return ResponseEntity.ok(batchService.mergeBatches(targetBatchId, sources, userId));
+    }
+
+    // ------------------- TRACE -------------------
     @GetMapping("/{batchId}/trace")
-
     public ResponseEntity<Map<String, Object>> getBatchTrace(@PathVariable String batchId) {
 
         List<BatchTrace> traces = batchTraceRepository.findByBatchIdOrderByTimestampAsc(batchId);
@@ -92,12 +118,10 @@ public class BatchController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("farmerId", batch.getFarmerId());
-        response.put("cropType", batch.getCropType());     // <-- safer naming
+        response.put("cropType", batch.getCropType());
         response.put("distributorId", batch.getDistributorId());
         response.put("traces", traces);
 
         return ResponseEntity.ok(response);
     }
-
-
 }
