@@ -31,14 +31,20 @@ public ResponseEntity<?> login(@RequestBody User loginRequest) {
         return ResponseEntity.status(401).body(Map.of("error", "User not found"));
     }
 
+    if (Boolean.TRUE.equals(user.getBlocked())) {
+        return ResponseEntity.status(403)
+                .body(Map.of("error", "User is blocked"));
+    }
+
     boolean success = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
 
     if (!success) {
-        return ResponseEntity.status(401).body(Map.of("error", "Invalid password"));
+        return ResponseEntity.status(401)
+                .body(Map.of("error", "Invalid password"));
     }
 
-    // Return user data except password
     user.setPassword(null);
     return ResponseEntity.ok(user);
 }
+
 }

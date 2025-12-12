@@ -3,7 +3,7 @@ import axios from "axios";
 import BatchCard from "./BatchCard";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
-import { CircleCheckBig, Clock, ListChecks } from "lucide-react";
+import { Clock, CheckCircle2, ListChecks } from "lucide-react";
 
 const DistributorDashboard = () => {
   const { user } = useAuth();
@@ -18,7 +18,6 @@ const DistributorDashboard = () => {
   useEffect(() => {
     if (!distributorId) return;
     fetchBatches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [distributorId]);
 
   const fetchBatches = async () => {
@@ -29,109 +28,115 @@ const DistributorDashboard = () => {
         axios.get(`${API_BASE}/batches/approved/${distributorId}`)
       ]);
 
-      setPending(Array.isArray(pendingRes.data) ? pendingRes.data : []);
-      setApproved(Array.isArray(approvedRes.data) ? approvedRes.data : []);
+      setPending(pendingRes.data || []);
+      setApproved(approvedRes.data || []);
     } catch (e) {
       console.error("Failed to load batches:", e);
       alert("Failed to load batches");
-      setPending([]);
-      setApproved([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // ------------------ APPROVE BATCH ------------------
   const handleApprove = async (batchId) => {
     try {
-      await axios.put(`${API_BASE}/batches/distributor/approve/${batchId}/${distributorId}`);
+      await axios.put(
+        `${API_BASE}/batches/distributor/approve/${batchId}/${distributorId}`
+      );
       fetchBatches();
     } catch (e) {
-      console.error("Approve failed:", e);
       alert("Approve failed");
     }
   };
-  // ------------------ REJECT BATCH ------------------
+
   const handleReject = async (batchId) => {
     try {
-      const reason = window.prompt("Enter rejection reason (optional):", "Quality issues");
+      const reason = window.prompt(
+        "Enter rejection reason (optional):",
+        "Quality issues"
+      );
       await axios.put(
         `${API_BASE}/batches/distributor/reject/${batchId}/${distributorId}`,
         { reason }
       );
       fetchBatches();
     } catch (e) {
-      console.error("Reject failed:", e);
       alert("Reject failed");
     }
   };
 
+  if (!distributorId)
+    return <p className="text-center mt-10">Please login as distributor.</p>;
 
-
-  if (!distributorId) return <p className="text-center mt-10">Please login as distributor.</p>;
   if (loading) return <p className="text-center mt-10">Loading...</p>;
 
   return (
     <div className="p-6 w-full">
-      {/* ----- HEADER SECTION ----- */}
+      {/* HEADER */}
       <motion.div
         initial={{ opacity: 0, y: -15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-10 glass-effect rounded-2xl p-6 shadow-lg"
+        className="mb-10 rounded-2xl p-6 shadow-lg bg-gradient-to-r from-green-100 via-emerald-50 to-green-100"
       >
-        <h1 className="text-3xl font-semibold text-gray-800">Distributor Dashboard</h1>
-        <p className="text-gray-500 mt-1">Manage and approve daily farmer batches</p>
+        <h1 className="text-3xl font-semibold text-gray-800">
+          Distributor Dashboard
+        </h1>
+        <p className="text-gray-600 mt-1">
+          Manage and approve farmer batches with ease
+        </p>
       </motion.div>
 
-      {/* ----- STATUS CARDS ----- */}
+      {/* STATS CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <StatsCard
-          icon={<Clock size={30} />}
+          icon={<Clock size={28} />}
           label="Pending Batches"
           value={pending.length}
-          color="text-yellow-600"
+          bg="from-yellow-50 to-yellow-100"
         />
+
         <StatsCard
-          icon={<CircleCheckBig size={30} />}
+          icon={<CheckCircle2 size={28} />}
           label="Approved Batches"
           value={approved.length}
-          color="text-green-600"
+          bg="from-green-50 to-green-100"
         />
+
         <StatsCard
-          icon={<ListChecks size={30} />}
+          icon={<ListChecks size={28} />}
           label="Total Processed"
           value={pending.length + approved.length}
-          color="text-blue-600"
+          bg="from-blue-50 to-blue-100"
         />
       </div>
 
-      {/* ----- PENDING BATCHES ----- */}
-      <SectionHeading title="Pending Batches for Review" />
+      {/* PENDING SECTION */}
+      <SectionHeading title="Pending Batches" />
 
       {pending.length === 0 ? (
-        <p className="text-gray-600 mt-3">No pending batches.</p>
+        <p className="text-gray-600 mt-2">No pending batches.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {pending.map((batch) => (
             <BatchCard
-              key={batch.batchId || batch.id}
+              key={batch.batchId}
               batch={batch}
               onApprove={() => handleApprove(batch.batchId)}
-              onReject={(reason) => handleReject(batch.batchId, reason)}
+              onReject={() => handleReject(batch.batchId)}
             />
           ))}
         </div>
       )}
 
-      {/* ----- APPROVED BATCHES ----- */}
-      <SectionHeading title="Approved & Listed Batches" className="mt-12" />
+      {/* APPROVED SECTION */}
+      <SectionHeading title="Approved Batches" className="mt-12" />
 
       {approved.length === 0 ? (
-        <p className="text-gray-600 mt-3">No approved batches yet.</p>
+        <p className="text-gray-600 mt-2">No approved batches yet.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {approved.map((batch) => (
-            <BatchCard key={batch.batchId || batch.id} batch={batch} readOnly />
+            <BatchCard key={batch.batchId} batch={batch} readOnly />
           ))}
         </div>
       )}
@@ -141,24 +146,26 @@ const DistributorDashboard = () => {
 
 export default DistributorDashboard;
 
-/* ---------------------- EXTRA COMPONENTS ------------------------ */
+/* -------------------------------------------- */
 
-const StatsCard = ({ icon, label, value, color }) => (
+const StatsCard = ({ icon, label, value, bg }) => (
   <motion.div
-    initial={{ opacity: 0, y: 15 }}
+    initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    className="glass-effect rounded-2xl p-5 flex items-center gap-4 shadow-md"
+    className={`p-5 rounded-2xl shadow-md bg-gradient-to-br ${bg} flex items-center gap-4`}
   >
-    <div className={`p-3 rounded-xl bg-white shadow ${color}`}>{icon}</div>
+    <div className="p-3 rounded-xl bg-white shadow">{icon}</div>
     <div>
-      <p className="text-gray-500 text-sm">{label}</p>
+      <p className="text-gray-600 text-sm">{label}</p>
       <p className="text-2xl font-semibold text-gray-800">{value}</p>
     </div>
   </motion.div>
 );
 
 const SectionHeading = ({ title, className = "" }) => (
-  <h2 className={`text-2xl font-semibold text-gray-800 mb-4 ${className}`}>
+  <h2
+    className={`text-2xl font-semibold text-gray-800 mb-4 border-l-4 border-green-500 pl-3 ${className}`}
+  >
     {title}
   </h2>
 );

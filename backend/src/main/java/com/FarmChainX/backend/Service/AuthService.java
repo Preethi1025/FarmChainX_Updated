@@ -32,10 +32,16 @@ public class AuthService {
     }
 
     public boolean login(String email, String password) {
-        User user = userRepository.findByEmail(email);
-        if (user == null) return false;
-        return encoder.matches(password, user.getPassword());
+    User user = userRepository.findByEmail(email);
+    if (user == null) return false;
+
+    if (Boolean.TRUE.equals(user.getBlocked())) {
+        return false;
     }
+
+    return encoder.matches(password, user.getPassword());
+}
+
 
     public User getUser(String email) {
         return userRepository.findByEmail(email);

@@ -6,16 +6,20 @@ import {
   Navigate,
 } from "react-router-dom";
 
+// Auth Provider
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
+// Common Components
 import Header from "./components/common/Header";
 import Footer from "./components/common/Footer";
+import { PageLoader } from "./components/common/LoadingSpinner";
 
-// User Pages
-import Home from "./pages/Home";
+// User Auth Pages
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
 
+// Public Pages
+import Home from "./pages/Home";
 import Marketplace from "./pages/Marketplace";
 import Traceability from "./pages/Traceability";
 
@@ -24,12 +28,10 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminRegister from "./pages/admin/AdminRegister";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
-import { PageLoader } from "./components/common/LoadingSpinner";
-import DashboardWrapper from './pages/DashboardWrapper'; // role-based dashboard wrapper
+// User Dashboard Router
+import DashboardWrapper from "./pages/DashboardWrapper";
 
-// --------------------------------------------
-// Protected Route for Normal Users
-// --------------------------------------------
+// Protected Route for Users
 function ProtectedUserRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -38,17 +40,13 @@ function ProtectedUserRoute({ children }) {
   return user ? children : <Navigate to="/login" />;
 }
 
-// --------------------------------------------
 // Protected Route for Admin
-// --------------------------------------------
 function ProtectedAdminRoute({ children }) {
   const admin = JSON.parse(localStorage.getItem("admin"));
   return admin?.role === "ADMIN" ? children : <Navigate to="/admin/login" />;
 }
 
-// --------------------------------------------
-// App Content Wrapper
-// --------------------------------------------
+// MAIN CONTENT
 function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
@@ -56,12 +54,12 @@ function AppContent() {
 
       <main>
         <Routes>
-          {/* Public Routes */}
+          {/* PUBLIC ROUTES */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Farmer Dashboard */}
+          {/* USER DASHBOARD */}
           <Route
             path="/dashboard"
             element={
@@ -71,29 +69,39 @@ function AppContent() {
             }
           />
 
-          {/* Other Routes */}
+          {/* PROTECTED USER ROUTES */}
           <Route
             path="/marketplace"
             element={
-              <ProtectedRoute>
+              <ProtectedUserRoute>
                 <Marketplace />
-              </ProtectedRoute>
+              </ProtectedUserRoute>
             }
           />
+
           <Route
             path="/trace/:batchId"
             element={
-              <ProtectedRoute>
+              <ProtectedUserRoute>
                 <Traceability />
-              </ProtectedRoute>
+              </ProtectedUserRoute>
             }
           />
 
-          {/* Other pages */}
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/trace/:batchId" element={<Traceability />} />
+          {/* ADMIN ROUTES */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
 
-          {/* Fallback Route */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedAdminRoute>
+                <AdminDashboard />
+              </ProtectedAdminRoute>
+            }
+          />
+
+          {/* FALLBACK */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
@@ -103,9 +111,7 @@ function AppContent() {
   );
 }
 
-// --------------------------------------------
-// Main App Wrapper with Auth Provider
-// --------------------------------------------
+// MAIN APP WRAPPER
 function App() {
   return (
     <AuthProvider>

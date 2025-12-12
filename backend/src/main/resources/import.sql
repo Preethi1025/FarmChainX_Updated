@@ -12,7 +12,8 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE,
     password VARCHAR(255),
     role VARCHAR(50),
-    phone VARCHAR(20)
+    phone VARCHAR(20),
+    blocked BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE crops (

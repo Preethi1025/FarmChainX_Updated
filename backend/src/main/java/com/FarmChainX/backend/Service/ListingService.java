@@ -19,70 +19,56 @@ public class ListingService {
     // Create listing - farmer cannot directly make it ACTIVE
     public Listing createListing(Listing listing) {
 
+        // Prevent duplicate listing for same crop
         if (listing.getCropId() != null && listingRepository.existsByCropId(listing.getCropId())) {
             throw new RuntimeException("This crop is already listed!");
         }
 
+        // Set timestamps
         if (listing.getCreatedAt() == null) {
             listing.setCreatedAt(LocalDateTime.now());
-<<<<<<< HEAD
-=======
-        }
-        if (listing.getUpdatedAt() == null) {
-            listing.setUpdatedAt(LocalDateTime.now());
->>>>>>> 33ebfebde6af206b77118014d27637b9ee404f76
         }
         listing.setUpdatedAt(LocalDateTime.now());
 
-        // ✅ Initially PENDING
+        // Set default status
         if (listing.getStatus() == null || listing.getStatus().isEmpty()) {
             listing.setStatus("PENDING");
         }
 
-<<<<<<< HEAD
-        Listing saved = listingRepository.save(listing);
-        return saved;
-=======
         return listingRepository.save(listing);
->>>>>>> 33ebfebde6af206b77118014d27637b9ee404f76
     }
 
+    // Get all listings
     public List<Listing> getAllListings() {
         return listingRepository.findAll();
     }
 
-<<<<<<< HEAD
-    /**
-     * Disable listings for a given batch (called when distributor rejects a batch).
-     * This sets listing.status to "REMOVED" so marketplace ignores it.
-     */
-    public void disableListingsForBatch(String batchId) {
-        if (batchId == null) return;
-        List<Listing> listings = listingRepository.findByBatchId(batchId);
-        for (Listing l : listings) {
-            l.setStatus("REMOVED");
-            l.setUpdatedAt(LocalDateTime.now());
-            listingRepository.save(l);
-        }
-=======
+    // Find listing by ID
     public Listing getListingById(Long id) {
         return listingRepository.findById(id).orElse(null);
     }
 
+    // Update listing
     public Listing updateListing(Listing listing) {
         listing.setUpdatedAt(LocalDateTime.now());
         return listingRepository.save(listing);
     }
 
-    // Distributor approves listing
+    // Distributor approves listing → status becomes ACTIVE
     public Listing approveListing(Long listingId) {
         Listing listing = getListingById(listingId);
+
         if (listing == null) {
             throw new RuntimeException("Listing not found");
         }
+
         listing.setStatus("ACTIVE");
         listing.setUpdatedAt(LocalDateTime.now());
-        return updateListing(listing);
->>>>>>> 33ebfebde6af206b77118014d27637b9ee404f76
+
+        return listingRepository.save(listing);
     }
+    public boolean existsByCropId(Long cropId) {
+    return listingRepository.existsByCropId(cropId);
+}
+
 }

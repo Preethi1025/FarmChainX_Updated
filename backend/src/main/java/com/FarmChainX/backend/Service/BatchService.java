@@ -23,9 +23,9 @@ public class BatchService {
     private final BatchTraceRepository batchTraceRepository;
 
     public BatchService(BatchRecordRepository batchRecordRepository,
-                        CropRepository cropRepository,
-                        ListingService listingService,
-                        BatchTraceRepository batchTraceRepository) {
+            CropRepository cropRepository,
+            ListingService listingService,
+            BatchTraceRepository batchTraceRepository) {
         this.batchRecordRepository = batchRecordRepository;
         this.cropRepository = cropRepository;
         this.listingService = listingService;
@@ -93,38 +93,46 @@ public class BatchService {
 
     // ------------------- APPROVE BATCH -------------------
     public BatchRecord approveBatch(String batchId, String distributorId) {
+
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
+
+        if ("APPROVED".equals(batch.getStatus())) {
+            return batch; // prevent double processing
+        }
 
         batch.setStatus("APPROVED");
         batch.setDistributorId(distributorId);
         batch.setUpdatedAt(LocalDateTime.now());
 
-        if ("HARVESTED".equalsIgnoreCase(batch.getStatus()) && batch.getHarvestDate() == null) {
-            batch.setHarvestDate(LocalDate.now());
-        }
-
-        // create listings
         List<Crop> crops = cropRepository.findByBatchId(batch.getBatchId());
-        for (Crop crop : crops) {
-            // if crop is blocked or already listed -> skip
-            if (Boolean.TRUE.equals(crop.getBlocked())) continue;
 
-            Listing listing = new Listing();
-            listing.setBatchId(batch.getBatchId());
-            listing.setFarmerId(batch.getFarmerId());
-            listing.setCropId(crop.getCropId());
-            try {
-                listing.setQuantity(crop.getQuantity() != null ? Double.parseDouble(crop.getQuantity()) : 0.0);
-            } catch (NumberFormatException e) {
-                listing.setQuantity(0.0);
+        for (Crop crop : crops) {
+
+            // prevent duplicate listing
+            if (!listingService.existsByCropId(crop.getCropId())) {
+
+                Listing listing = new Listing();
+                listing.setBatchId(batch.getBatchId());
+                listing.setFarmerId(batch.getFarmerId());
+                listing.setCropId(crop.getCropId());
+                listing.setQuantity(parseDoubleSafe(crop.getQuantity()));
+                listing.setPrice(0.0);
+                listing.setStatus("ACTIVE");
+
+                listingService.createListing(listing);
             }
-            listing.setPrice(0.0);
-            listing.setStatus("ACTIVE");
-            listingService.createListing(listing);
         }
 
         return batchRecordRepository.save(batch);
+    }
+
+    private Double parseDoubleSafe(String number) {
+        try {
+            return Double.parseDouble(number);
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 
     // ------------------- REJECT BATCH -------------------
@@ -159,7 +167,6 @@ public class BatchService {
         trace.setChangedBy(userId);
         trace.setTimestamp(LocalDateTime.now());
         batchTraceRepository.save(trace);
-
 
         return batch;
     }

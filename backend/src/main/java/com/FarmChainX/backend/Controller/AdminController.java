@@ -1,11 +1,13 @@
 package com.FarmChainX.backend.Controller;
 
 import com.FarmChainX.backend.Model.User;
-import com.FarmChainX.backend.Service.AuthService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import com.FarmChainX.backend.Repository.CropRepository;
+import com.FarmChainX.backend.Repository.UserRepository;
+import com.FarmChainX.backend.Service.AdminService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -13,37 +15,67 @@ import java.util.Map;
 @CrossOrigin("*")
 public class AdminController {
 
-    @Autowired
-    AuthService authService;
+    private final AdminService adminService;
+    private final UserRepository userRepository;
+    private final CropRepository cropRepository;
 
-    // ✔ Admin Registration
+    public AdminController(AdminService adminService,
+                           UserRepository userRepository,
+                           CropRepository cropRepository) {
+        this.adminService = adminService;
+        this.userRepository = userRepository;
+        this.cropRepository = cropRepository;
+    }
+
+    // ---------------- REGISTER ADMIN ----------------
     @PostMapping("/register")
-    public ResponseEntity<?> registerAdmin(@RequestBody User admin) {
-
-        admin.setRole("ADMIN"); // force admin role
-
-        User saved = authService.register(admin);
-
-        saved.setPassword(null); // hide password
-        return ResponseEntity.ok(saved);
+    public ResponseEntity<?> registerAdmin(@RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(adminService.registerAdmin(body));
     }
 
-    // ✔ Admin Login
+    // ---------------- LOGIN ADMIN ----------------
     @PostMapping("/login")
-    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> req) {
-
-        String email = req.get("email");
-        String password = req.get("password");
-
-        User user = authService.getUser(email);
-
-        if (user == null || !user.getRole().equals("ADMIN"))
-            return ResponseEntity.status(401).body(Map.of("error", "Not an admin"));
-
-        if (!authService.login(email, password))
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid password"));
-
-        user.setPassword(null);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> body) {
+        return adminService.loginAdmin(body);
     }
+
+    // ---------------- DASHBOARD STATS ----------------
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats() {
+        return ResponseEntity.ok(adminService.getStats());
+    }
+
+    // ---------------- FETCH FARMERS ----------------
+    @GetMapping("/farmers")
+    public ResponseEntity<?> getFarmers() {
+        return ResponseEntity.ok(userRepository.findByRole("FARMER"));
+    }
+
+    // ---------------- FETCH DISTRIBUTORS ----------------
+    @GetMapping("/distributors")
+    public ResponseEntity<?> getDistributors() {
+        return ResponseEntity.ok(userRepository.findByRole("DISTRIBUTOR"));
+    }
+
+    // ---------------- FETCH CONSUMERS ----------------
+    @GetMapping("/consumers")
+    public ResponseEntity<?> getConsumers() {
+        return ResponseEntity.ok(userRepository.findByRole("BUYER"));
+    }
+
+    // ---------------- FETCH CROPS ----------------
+    @GetMapping("/crops")
+    public ResponseEntity<?> getCrops() {
+        return ResponseEntity.ok(cropRepository.findAll());
+    }
+    @PutMapping("/block/{id}")
+public ResponseEntity<?> block(@PathVariable String id) {
+    return ResponseEntity.ok(adminService.blockUser(id));
+}
+
+@PutMapping("/unblock/{id}")
+public ResponseEntity<?> unblock(@PathVariable String id) {
+    return ResponseEntity.ok(adminService.unblockUser(id));
+}
+
 }

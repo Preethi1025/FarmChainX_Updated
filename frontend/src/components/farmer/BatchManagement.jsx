@@ -115,34 +115,34 @@ const BatchManagement = ({ onClose }) => {
 
   // ---- Actions ----
 
-  const applyStatusUpdate = async (batchId) => {
-    const newStatus = statusUpdate[batchId];
-    if (!newStatus) {
-      alert("Please select a status first.");
-      return;
-    }
+const applyStatusUpdate = async (batchId) => {
+  const newStatus = statusUpdate[batchId];
+  if (!newStatus) {
+    alert("Please select a status first.");
+    return;
+  }
 
-    try {
-      setLoadingRow(batchId);
-      await axios.put(`${apiBase}/api/batches/${batchId}/status`, {
-        status: newStatus,
-      });
+  try {
+    setLoadingRow(batchId);
+    await axios.put(`${apiBase}/api/batches/${batchId}/status`, {
+      status: newStatus,
+      userId: user.id,   // REQUIRED 🔥
+    });
 
-      // Update local state
-      setBatches((prev) =>
-        prev.map((b) =>
-          b.batchId === batchId ? { ...b, status: newStatus } : b
-        )
-      );
+    setBatches(prev =>
+      prev.map(b =>
+        b.batchId === batchId ? { ...b, status: newStatus } : b
+      )
+    );
 
-      alert("Batch status updated!");
-    } catch (err) {
-      console.error("Error updating batch status:", err);
-      alert("Failed to update status.");
-    } finally {
-      setLoadingRow(null);
-    }
-  };
+    alert("Batch status updated!");
+  } catch (err) {
+    console.error("Error updating batch status:", err);
+    alert("Failed to update status.");
+  } finally {
+    setLoadingRow(null);
+  }
+};
 
   const applyQualityUpdate = async (batchId) => {
     const q = qualityUpdate[batchId] || {};

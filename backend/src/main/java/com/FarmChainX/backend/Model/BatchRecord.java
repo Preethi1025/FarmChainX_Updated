@@ -12,16 +12,10 @@ public class BatchRecord {
     @Column(name = "batch_id", nullable = false, unique = true)
     private String batchId;
 
-    @ManyToOne
-    @JoinColumn(name = "batch_id", referencedColumnName = "batch_id", insertable = false, updatable = false)
-    private Crop crop;
-    public Crop getCrop() { return crop; }
-
+    // ❌ Removed invalid @ManyToOne crop relationship
 
     @Column(name = "farmer_id")
     private String farmerId;
-
-
 
     @Column(name = "distributor_id")
     private String distributorId;
@@ -38,10 +32,9 @@ public class BatchRecord {
     @Column(name = "harvest_date")
     private LocalDate harvestDate;
 
-    @Column(name = "status", nullable = false)
+    @Column(name = "status")
     private String status = "PLANTED";
 
-    // Use Boolean instead of primitive boolean to allow null values from DB
     @Column(name = "is_blocked")
     private Boolean blocked = false;
 
@@ -60,11 +53,8 @@ public class BatchRecord {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // ---------------- AUTO SETTERS FOR TIMESTAMPS ----------------
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    // Getters & Setters
 
-    // ---------------- GETTERS & SETTERS ----------------
     public String getBatchId() { return batchId; }
     public void setBatchId(String batchId) { this.batchId = batchId; }
 
@@ -102,7 +92,8 @@ public class BatchRecord {
     public void setQrCodeUrl(String qrCodeUrl) { this.qrCodeUrl = qrCodeUrl; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
     public LocalDateTime getUpdatedAt() { return updatedAt; }
-
-
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
