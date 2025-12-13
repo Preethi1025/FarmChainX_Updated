@@ -16,35 +16,61 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    // ---------------- REGISTER ----------------
     @PostMapping("/register")
-    public String register(@RequestBody User user) {
-        authService.register(user);
-        return "Registration Successful!";
+    public ResponseEntity<?> register(@RequestBody User user) {
+        try {
+            User saved = authService.register(user);
+            saved.setPassword(null);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Registration successful",
+                    "user", saved
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
-   @PostMapping("/login")
-public ResponseEntity<?> login(@RequestBody User loginRequest) {
+    // ---------------- LOGIN ----------------
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody User loginRequest) {
 
-    User user = authService.getUser(loginRequest.getEmail());
+        User user = authService.getUser(loginRequest.getEmail());
 
-    if (user == null) {
-        return ResponseEntity.status(401).body(Map.of("error", "User not found"));
+        if (user == null) {
+            return ResponseEntity
+                    .status(401)
+                    .body(Map.of("error", "User not found"));
+        }
+
+        if (Boolean.TRUE.equals(user.getBlocked())) {
+            return ResponseEntity
+                    .status(403)
+                    .body(Map.of("error", "User is blocked"));
+        }
+
+        boolean success = authService.login(
+                loginRequest.getEmail(),
+                loginRequest.getPassword()
+        );
+
+        if (!success) {
+            return ResponseEntity
+                    .status(401)
+                    .body(Map.of("error", "Invalid password"));
+        }
+
+        user.setPassword(null);
+        return ResponseEntity.ok(user);
     }
 
-    if (Boolean.TRUE.equals(user.getBlocked())) {
-        return ResponseEntity.status(403)
-                .body(Map.of("error", "User is blocked"));
+    // ---------------- CHECK EMAIL EXISTS (LIVE VALIDATION) ----------------
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmail(@RequestParam String email) {
+        boolean exists = authService.emailExists(email);
+        return ResponseEntity.ok(Map.of("exists", exists));
     }
-
-    boolean success = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
-
-    if (!success) {
-        return ResponseEntity.status(401)
-                .body(Map.of("error", "Invalid password"));
-    }
-
-    user.setPassword(null);
-    return ResponseEntity.ok(user);
-}
-
 }

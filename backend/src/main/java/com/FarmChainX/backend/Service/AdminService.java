@@ -7,7 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,20 +27,19 @@ public class AdminService {
 
     // ---------------- REGISTER ADMIN ----------------
     public Map<String, String> registerAdmin(Map<String, String> data) {
-    User admin = new User();
+        User admin = new User();
 
-    admin.setId(UUID.randomUUID().toString());  // <-- ADD THIS LINE
+        admin.setId(UUID.randomUUID().toString()); // <-- ADD THIS LINE
 
-    admin.setName(data.get("name"));
-    admin.setEmail(data.get("email"));
-    admin.setPassword(encoder.encode(data.get("password")));
-    admin.setRole("ADMIN");
+        admin.setName(data.get("name"));
+        admin.setEmail(data.get("email"));
+        admin.setPassword(encoder.encode(data.get("password")));
+        admin.setRole("ADMIN");
 
-    userRepository.save(admin);
+        userRepository.save(admin);
 
-    return Map.of("message", "Admin registered successfully!");
-}
-
+        return Map.of("message", "Admin registered successfully!");
+    }
 
     // ---------------- LOGIN ADMIN ----------------
     public ResponseEntity<?> loginAdmin(Map<String, String> data) {
@@ -57,9 +58,11 @@ public class AdminService {
     // ---------------- DASHBOARD STATS ----------------
     public Map<String, Long> getStats() {
         Map<String, Long> stats = new HashMap<>();
+
         stats.put("farmers", userRepository.countByRole("FARMER"));
         stats.put("distributors", userRepository.countByRole("DISTRIBUTOR"));
         stats.put("consumers", userRepository.countByRole("BUYER"));
+        stats.put("admins", userRepository.countByRole("ADMIN")); // ✅ ADD THIS
         stats.put("crops", cropRepository.count());
 
         return stats;
@@ -83,6 +86,27 @@ public class AdminService {
         user.setBlocked(false);
         userRepository.save(user);
         return Map.of("message", "User unblocked");
+    }
+
+    public Map<String, String> changeUserRole(String userId, String newRole) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null)
+            return Map.of("error", "User not found");
+
+        // Prevent changing admin role
+        if ("ADMIN".equals(user.getRole())) {
+            return Map.of("error", "Cannot change admin role");
+        }
+
+        // Validate new role
+        List<String> validRoles = Arrays.asList("FARMER", "DISTRIBUTOR", "BUYER");
+        if (!validRoles.contains(newRole)) {
+            return Map.of("error", "Invalid role");
+        }
+
+        user.setRole(newRole);
+        userRepository.save(user);
+        return Map.of("message", "Role updated successfully");
     }
 
 }

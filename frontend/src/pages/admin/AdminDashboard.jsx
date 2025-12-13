@@ -1,513 +1,372 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
-  Users,
-  Leaf,
-  Truck,
-  User,
-  Search,
-  Package,
   Lock,
   Unlock,
   Trash2,
   Info,
   MoreHorizontal,
-  X,
-  Download
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({});
-  const [farmers, setFarmers] = useState([]);
-  const [distributors, setDistributors] = useState([]);
-  const [consumers, setConsumers] = useState([]);
-  const [crops, setCrops] = useState([]);
-  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
 
-  const [activeTable, setActiveTable] = useState(""); 
+  const [users, setUsers] = useState([]);
+  const [crops, setCrops] = useState([]);
+  const [stats, setStats] = useState({});
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+
+  const [activeTab, setActiveTab] = useState("USERS");
   const [selectedRow, setSelectedRow] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [pendingRoleChange, setPendingRoleChange] = useState(null);
 
   const admin = JSON.parse(localStorage.getItem("admin"));
 
-  // ---------- LOAD DASHBOARD DATA ----------
-  const loadData = async () => {
-    try {
-      const statsRes = await axios.get("http://localhost:8080/api/admin/stats");
-      const farmerRes = await axios.get("http://localhost:8080/api/admin/farmers");
-      const distributorRes = await axios.get("http://localhost:8080/api/admin/distributors");
-      const consumerRes = await axios.get("http://localhost:8080/api/admin/consumers");
-      const cropRes = await axios.get("http://localhost:8080/api/admin/crops");
+  /* ---------------- LOGOUT ---------------- */
+  const logoutAdmin = () => {
+    localStorage.removeItem("admin");
+    navigate("/admin/login");
+  };
 
-      setStats(statsRes.data);
-      setFarmers(stripSensitive(farmerRes.data));
-      setDistributors(stripSensitive(distributorRes.data));
-      setConsumers(stripSensitive(consumerRes.data));
-      setCrops(cropRes.data);
-    } catch (error) {
-      console.error("Admin dashboard error:", error);
-    }
+  /* ---------------- LOAD DATA ---------------- */
+  const loadData = async () => {
+    const statsRes = await axios.get("http://localhost:8080/api/admin/stats");
+
+    const farmers = (await axios.get("http://localhost:8080/api/admin/farmers")).data;
+    const distributors = (await axios.get("http://localhost:8080/api/admin/distributors")).data;
+    const consumers = (await axios.get("http://localhost:8080/api/admin/consumers")).data;
+    const cropsRes = await axios.get("http://localhost:8080/api/admin/crops");
+
+    const allUsers = [...farmers, ...distributors, ...consumers].map(u => {
+      const v = { ...u };
+      delete v.password;
+      return v;
+    });
+
+    setStats(statsRes.data);
+    setUsers(allUsers);
+    setCrops(cropsRes.data);
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // Remove passwords before displaying
-  const stripSensitive = (data) =>
-    data.map((item) => {
-      const v = { ...item };
-      delete v.password;
-      return v;
-    });
-
-  const handleCardClick = (table) => {
-    setActiveTable(activeTable === table ? "" : table);
-  };
-
-  // ---------- BLOCK USER ----------
-  const doBlock = async (id) => {
-    setActionLoadingId(id);
+  /* ---------------- USER ACTIONS ---------------- */
+  const blockUser = async (id) => {
     await axios.put(`http://localhost:8080/api/admin/block/${id}`);
-    await loadData();
-    setActionLoadingId(null);
+    loadData();
   };
 
-  // ---------- UNBLOCK USER ----------
-  const doUnblock = async (id) => {
-    setActionLoadingId(id);
+  const unblockUser = async (id) => {
     await axios.put(`http://localhost:8080/api/admin/unblock/${id}`);
-    await loadData();
-    setActionLoadingId(null);
+    loadData();
   };
 
-  // ---------- DELETE CROP ----------
-  const deleteCrop = async (cropId) => {
+  const confirmRoleChange = async () => {
+    await axios.put(
+      `http://localhost:8080/api/admin/role/${pendingRoleChange.user.id}`,
+      { role: pendingRoleChange.role }
+    );
+    setPendingRoleChange(null);
+    loadData();
+  };
+
+  const deleteCrop = async (id) => {
     if (!window.confirm("Delete this crop?")) return;
-    setActionLoadingId(cropId);
-    await axios.delete(`http://localhost:8080/api/crops/delete/${cropId}`);
-    await loadData();
-    setActionLoadingId(null);
+    await axios.delete(`http://localhost:8080/api/crops/delete/${id}`);
+    loadData();
   };
 
-  // ---------- EXPORT CSV ----------
-  const exportCSV = (data, name) => {
-    const csv = [
-      Object.keys(data[0]).join(","),
-      ...data.map((row) => Object.values(row).join(","))
-    ].join("\n");
+  /* ---------------- FILTER USERS ---------------- */
+  const filteredUsers = users
+    .filter(u => JSON.stringify(u).toLowerCase().includes(search))
+    .filter(u =>
+      statusFilter === "ALL" ||
+      (statusFilter === "ACTIVE" && !u.blocked) ||
+      (statusFilter === "INACTIVE" && u.blocked)
+    )
+    .filter(u =>
+      roleFilter === "ALL" || u.role === roleFilter
+    );
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-  };
-
-  const openDetails = (row) => {
-    setSelectedRow(row);
-    setShowDetails(true);
-  };
+  /* ---------------- UI STATS ---------------- */
+  const uiStats = [
+    { label: "Farmers", value: stats.farmers, color: "from-blue-400 to-blue-600" },
+    { label: "Distributors", value: stats.distributors, color: "from-green-400 to-green-600" },
+    { label: "Consumers", value: stats.consumers, color: "from-purple-400 to-purple-600" },
+    { label: "Admins", value: stats.admins, color: "from-red-400 to-red-600" },
+    { label: "Crops", value: stats.crops, color: "from-orange-400 to-orange-600" }
+  ];
 
   return (
-    <div className="p-10 min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-100">
+    <div className="p-10 min-h-screen bg-gradient-to-br from-slate-100 to-slate-200">
 
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex justify-between items-center mb-10"
-      >
-        <h1 className="text-4xl font-bold text-gray-800 tracking-wide">
-          Admin Dashboard
-        </h1>
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-10">
+        <h1 className="text-4xl font-bold text-slate-800">Admin Portal</h1>
 
-        <div className="px-5 py-2 bg-primary-600 text-white rounded-full shadow-lg text-lg">
-          {admin?.name}
-        </div>
-      </motion.div>
+        <div className="flex items-center gap-4">
+          <div className="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600
+                          text-white rounded-full shadow">
+            {admin?.name}
+          </div>
 
-      {/* Stats Card Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-14">
-        
-        <div onClick={() => handleCardClick("farmers")}>
-          <StatCard
-            label="Farmers"
-            value={stats.farmers}
-            icon={<Users size={38} />}
-            color="from-blue-200/40 to-blue-100/70"
-            active={activeTable === "farmers"}
-          />
-        </div>
-
-        <div onClick={() => handleCardClick("distributors")}>
-          <StatCard
-            label="Distributors"
-            value={stats.distributors}
-            icon={<Truck size={38} />}
-            color="from-green-200/40 to-green-100/70"
-            active={activeTable === "distributors"}
-          />
-        </div>
-
-        <div onClick={() => handleCardClick("consumers")}>
-          <StatCard
-            label="Consumers"
-            value={stats.consumers}
-            icon={<User size={38} />}
-            color="from-purple-200/40 to-purple-100/70"
-            active={activeTable === "consumers"}
-          />
-        </div>
-
-        <div onClick={() => handleCardClick("crops")}>
-          <StatCard
-            label="Crops"
-            value={stats.crops}
-            icon={<Leaf size={38} />}
-            color="from-orange-200/40 to-orange-100/70"
-            active={activeTable === "crops"}
-          />
+          <button
+            onClick={logoutAdmin}
+            className="px-4 py-2 rounded-full bg-red-500 text-white
+                       hover:bg-red-600 transition shadow"
+          >
+            Logout
+          </button>
         </div>
       </div>
 
-      {/* Search bar (only if table is open) */}
-      {activeTable && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="relative max-w-lg mx-auto mb-10"
+      {/* STATS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+        {uiStats.map(s => (
+          <motion.div
+            key={s.label}
+            whileHover={{ scale: 1.05 }}
+            className={`bg-gradient-to-r ${s.color} text-white p-6 rounded-2xl shadow-lg`}
+          >
+            <p className="text-3xl font-bold">{s.value ?? 0}</p>
+            <p className="opacity-90">{s.label}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* TABS + REPORTS */}
+      <div className="flex gap-4 mb-6">
+        {["USERS", "CROPS"].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-6 py-2 rounded-full font-medium transition-all
+              ${activeTab === tab
+                ? "bg-purple-600 text-white shadow-lg"
+                : "bg-white hover:bg-gray-100"
+              }`}
+          >
+            {tab}
+          </button>
+        ))}
+
+        <button
+          onClick={() => navigate("/admin/reports")}
+          className="px-6 py-2 rounded-full font-medium bg-white hover:bg-gray-100
+                     border border-dashed border-purple-400 text-purple-600"
         >
-          <Search className="absolute left-4 top-3 text-gray-400" size={20} />
+          SYSTEM REPORTS
+        </button>
+      </div>
+
+      {/* FILTER BAR */}
+      {activeTab === "USERS" && (
+        <div className="flex flex-wrap gap-4 mb-6">
           <input
-            type="text"
-            placeholder="Search..."
-            className="w-full border rounded-full py-3 pl-12 pr-4 shadow-md bg-white/60 backdrop-blur-md focus:ring-2 focus:ring-primary-500"
-            onChange={(e) => setSearch(e.target.value.toLowerCase())}
+            placeholder="Search users..."
+            className="px-4 py-2 rounded-lg border shadow-sm w-64"
+            onChange={e => setSearch(e.target.value.toLowerCase())}
           />
-        </motion.div>
+          <select className="px-3 py-2 rounded-lg border" onChange={e => setStatusFilter(e.target.value)}>
+            <option value="ALL">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+          <select className="px-3 py-2 rounded-lg border" onChange={e => setRoleFilter(e.target.value)}>
+            <option value="ALL">All Roles</option>
+            <option value="FARMER">Farmer</option>
+            <option value="DISTRIBUTOR">Distributor</option>
+            <option value="BUYER">Buyer</option>
+          </select>
+        </div>
       )}
 
-      {/* TABLES */}
-      <AnimatePresence>
-        {activeTable === "farmers" && (
-          <TableBlock
-            title="Farmers"
-            data={farmers}
-            search={search}
-            icon={Users}
-            openDetails={openDetails}
-            doBlock={doBlock}
-            doUnblock={doUnblock}
-            actionLoadingId={actionLoadingId}
-          />
-        )}
+      {/* USERS TABLE */}
+      {activeTab === "USERS" && (
+        <Table headers={["Email", "Role", "Status", "Actions"]}>
+          {filteredUsers.map(u => (
+            <Row key={u.id}>
+              <Cell>{u.email}</Cell>
 
-        {activeTable === "distributors" && (
-          <TableBlock
-            title="Distributors"
-            data={distributors}
-            search={search}
-            icon={Truck}
-            openDetails={openDetails}
-            doBlock={doBlock}
-            doUnblock={doUnblock}
-            actionLoadingId={actionLoadingId}
-          />
-        )}
+              <Cell>
+                {u.role === "ADMIN" ? (
+                  <Badge color="purple">ADMIN</Badge>
+                ) : (
+                  <select
+                    value={u.role}
+                    onChange={e => setPendingRoleChange({ user: u, role: e.target.value })}
+                    className="border rounded px-2 py-1"
+                  >
+                    <option value="FARMER">Farmer</option>
+                    <option value="DISTRIBUTOR">Distributor</option>
+                    <option value="BUYER">Buyer</option>
+                  </select>
+                )}
+              </Cell>
 
-        {activeTable === "consumers" && (
-          <TableBlock
-            title="Consumers"
-            data={consumers}
-            search={search}
-            icon={User}
-            openDetails={openDetails}
-            doBlock={doBlock}
-            doUnblock={doUnblock}
-            actionLoadingId={actionLoadingId}
-          />
-        )}
+              <Cell>
+                <Badge color={u.blocked ? "red" : "green"}>
+                  {u.blocked ? "Inactive" : "Active"}
+                </Badge>
+              </Cell>
 
-        {activeTable === "crops" && (
-          <TableBlock
-            title="Crops"
-            data={crops}
-            search={search}
-            icon={Package}
-            isCropTable={true}
-            openDetails={openDetails}
-            deleteCrop={deleteCrop}
-            actionLoadingId={actionLoadingId}
-          />
-        )}
-      </AnimatePresence>
+              <Cell className="flex gap-3">
+                {u.blocked ? (
+                  <Unlock onClick={() => unblockUser(u.id)} className="cursor-pointer" />
+                ) : (
+                  <Lock onClick={() => blockUser(u.id)} className="cursor-pointer" />
+                )}
+                <MoreHorizontal
+                  onClick={() => { setSelectedRow(u); setShowDetails(true); }}
+                  className="cursor-pointer"
+                />
+              </Cell>
+            </Row>
+          ))}
+        </Table>
+      )}
+
+      {/* CROPS TABLE */}
+      {activeTab === "CROPS" && (
+        <div className="bg-white/80 backdrop-blur rounded-2xl shadow overflow-hidden">
+          <div className="grid grid-cols-5 bg-gray-100 px-6 py-3 text-sm font-semibold">
+            <span>Crop</span>
+            <span>Quantity</span>
+            <span>Status</span>
+            <span>Batch</span>
+            <span className="text-right">Actions</span>
+          </div>
+
+          {crops.map(c => (
+            <div
+              key={c.cropId}
+              className="grid grid-cols-5 px-6 py-4 border-t items-center hover:bg-gray-50"
+            >
+              <div className="font-medium">{c.cropName}</div>
+              <div>{c.quantity}</div>
+              <div><Badge color="blue">{c.status}</Badge></div>
+              <div className="text-sm text-gray-500">{c.batchId || "—"}</div>
+              <div className="flex justify-end gap-3">
+                {c.batchId && (
+                  <a href={`/trace/${c.batchId}`} target="_blank" rel="noreferrer">
+                    <Info size={16} />
+                  </a>
+                )}
+                <MoreHorizontal
+                  onClick={() => { setSelectedRow(c); setShowDetails(true); }}
+                  className="cursor-pointer"
+                />
+                <Trash2
+                  onClick={() => deleteCrop(c.cropId)}
+                  className="cursor-pointer text-red-600"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* CONFIRM ROLE CHANGE */}
+      {pendingRoleChange && (
+        <ConfirmModal
+          text={`Change role of ${pendingRoleChange.user.email} to ${pendingRoleChange.role}?`}
+          onCancel={() => setPendingRoleChange(null)}
+          onConfirm={confirmRoleChange}
+        />
+      )}
 
       {/* DETAILS MODAL */}
-      <DetailsModal
-        show={showDetails}
-        close={() => setShowDetails(false)}
-        activeTable={activeTable}
-        row={selectedRow}
-        doBlock={doBlock}
-        doUnblock={doUnblock}
-        exportCSV={exportCSV}
-      />
+      <AnimatePresence>
+        {showDetails && selectedRow && (
+          <DetailsModal row={selectedRow} onClose={() => setShowDetails(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-//
-// ---------------- STAT CARD ----------------
-//
-function StatCard({ label, value, icon, color, active }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.05 }}
-      className={`p-6 rounded-3xl shadow-lg bg-gradient-to-br ${color} 
-      cursor-pointer backdrop-blur-xl border border-white/30 transition-all
-      ${active ? "ring-4 ring-primary-400 shadow-xl" : ""}`}
-    >
-      <div className="flex items-center gap-5">
-        <div className="p-4 bg-white/80 rounded-2xl shadow">{icon}</div>
-        <div>
-          <p className="text-4xl font-bold text-gray-800">{value}</p>
-          <p className="text-gray-600 text-sm">{label}</p>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+/* ---------------- SMALL COMPONENTS ---------------- */
 
-//
-// --------------- TABLE BLOCK ----------------
-//
-function TableBlock({
-  title,
-  data,
-  search,
-  icon: Icon,
-  openDetails,
-  doBlock,
-  doUnblock,
-  deleteCrop,
-  actionLoadingId,
-  isCropTable
-}) {
-  const filtered = data.filter((item) =>
-    JSON.stringify(item).toLowerCase().includes(search)
-  );
+const Badge = ({ children, color }) => (
+  <span className={`px-3 py-1 rounded-full text-xs font-medium
+    ${color === "green" && "bg-green-100 text-green-700"}
+    ${color === "red" && "bg-red-100 text-red-700"}
+    ${color === "blue" && "bg-blue-100 text-blue-700"}
+    ${color === "purple" && "bg-purple-100 text-purple-700"}
+  `}>
+    {children}
+  </span>
+);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 40 }}
-      className="mb-14 bg-white/70 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-gray-200"
-    >
-      <div className="flex items-center gap-3 mb-5">
-        <Icon className="text-primary-600" size={28} />
-        <h2 className="text-2xl font-semibold text-gray-800">{title}</h2>
-      </div>
+const Table = ({ headers, children }) => (
+  <div className="bg-white/80 backdrop-blur rounded-2xl shadow overflow-hidden">
+    <div className="grid grid-cols-4 bg-gray-100 px-6 py-3 text-sm font-semibold">
+      {headers.map(h => <span key={h}>{h}</span>)}
+    </div>
+    {children}
+  </div>
+);
 
-      {filtered.length === 0 ? (
-        <p className="text-gray-500 text-center py-5">No records found</p>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-gray-200">
-          <table className="min-w-full text-gray-800">
-            <thead className="bg-gray-100/70 text-gray-700">
-              <tr>
-                {Object.keys(filtered[0]).map((key) => (
-                  <th key={key} className="py-3 px-4 border-b text-left capitalize">
-                    {key}
-                  </th>
-                ))}
-                <th className="py-3 px-4 border-b text-right">Actions</th>
-              </tr>
-            </thead>
+const Row = ({ children }) => (
+  <div className="grid grid-cols-4 px-6 py-4 border-t items-center hover:bg-gray-50">
+    {children}
+  </div>
+);
 
-            <tbody>
-              {filtered.map((row, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/80 transition">
-                  {Object.values(row).map((val, i) => (
-                    <td key={i} className="py-3 px-4 border-b">
-                      {String(val)}
-                    </td>
-                  ))}
+const Cell = ({ children, className }) => (
+  <div className={className}>{children}</div>
+);
 
-                  {/* ACTION BUTTONS */}
-                  <td className="py-3 px-4 border-b text-right">
-                    <div className="inline-flex items-center gap-2">
-
-                      {!isCropTable ? (
-                        <>
-                          {row.blocked ? (
-                            <button
-                              onClick={() => doUnblock(row.id)}
-                              className="p-2 rounded-md border hover:bg-gray-50"
-                              disabled={actionLoadingId === row.id}
-                            >
-                              <Unlock size={16} />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => doBlock(row.id)}
-                              className="p-2 rounded-md border hover:bg-gray-50"
-                              disabled={actionLoadingId === row.id}
-                            >
-                              <Lock size={16} />
-                            </button>
-                          )}
-
-                          {/* DETAILS BUTTON */}
-                          <button
-                            onClick={() => openDetails(row)}
-                            className="p-2 rounded-md border hover:bg-gray-50"
-                          >
-                            <MoreHorizontal size={16} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {row.batchId && (
-                            <a
-                              href={`${window.location.origin}/trace/${row.batchId}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-2 rounded-md border hover:bg-gray-50"
-                            >
-                              <Info size={16} />
-                            </a>
-                          )}
-
-                          <button
-                            onClick={() => deleteCrop(row.cropId)}
-                            className="p-2 rounded-md border hover:bg-red-50 text-red-600"
-                            disabled={actionLoadingId === row.cropId}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-
-                          <button
-                            onClick={() => openDetails(row)}
-                            className="p-2 rounded-md border hover:bg-gray-50"
-                          >
-                            <MoreHorizontal size={16} />
-                          </button>
-                        </>
-                      )}
-
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-
-          </table>
-        </div>
-      )}
-    </motion.div>
-  );
-}
-
-//
-// ------------------- DETAILS MODAL -------------------
-//
-function DetailsModal({
-  show,
-  close,
-  row,
-  activeTable,
-  doBlock,
-  doUnblock,
-  exportCSV
-}) {
-  if (!show || !row) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      >
-        <motion.div
-          initial={{ scale: 0.95, y: 10 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.95, y: 10 }}
-          className="bg-white w-full max-w-xl rounded-2xl shadow-xl p-6 relative"
+const ConfirmModal = ({ text, onCancel, onConfirm }) => (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-xl w-96">
+      <p className="mb-6">{text}</p>
+      <div className="flex justify-end gap-3">
+        <button onClick={onCancel}>Cancel</button>
+        <button
+          onClick={onConfirm}
+          className="bg-purple-600 text-white px-4 py-2 rounded"
         >
-          <button
-            onClick={close}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100"
-          >
-            <X size={18} />
-          </button>
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
-          <h3 className="text-xl font-semibold mb-4">Details</h3>
+const DetailsModal = ({ row, onClose }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+  >
+    <motion.div
+      initial={{ scale: 0.95, y: 10 }}
+      animate={{ scale: 1, y: 0 }}
+      exit={{ scale: 0.95, y: 10 }}
+      className="bg-white p-6 rounded-xl w-full max-w-xl relative shadow-xl"
+    >
+      <X onClick={onClose} className="absolute top-4 right-4 cursor-pointer" />
+      <h3 className="font-semibold mb-4 text-lg">Details</h3>
 
-          <div className="max-h-[50vh] overflow-auto pr-2 space-y-3">
-            {Object.entries(row).map(([key, val]) => (
-              <div key={key} className="bg-gray-50 p-3 rounded-md text-sm">
-                <div className="text-xs text-gray-500 capitalize">{key}</div>
-                <div className="font-medium text-gray-800">{String(val)}</div>
-              </div>
-            ))}
+      <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-3">
+        {Object.entries(row).map(([k, v]) => (
+          <div key={k} className="bg-gray-50 rounded-lg p-3 text-sm">
+            <div className="text-xs text-gray-500 capitalize">{k}</div>
+            <div className="font-medium break-words">{String(v)}</div>
           </div>
-
-          <div className="mt-5 flex gap-3 flex-wrap">
-            {activeTable !== "crops" && (
-              <>
-                {row.blocked ? (
-                  <button
-                    onClick={() => {
-                      doUnblock(row.id);
-                      close();
-                    }}
-                    className="px-3 py-2 rounded-md border inline-flex items-center gap-2"
-                  >
-                    <Unlock size={14} /> Unblock
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      doBlock(row.id);
-                      close();
-                    }}
-                    className="px-3 py-2 rounded-md border inline-flex items-center gap-2"
-                  >
-                    <Lock size={14} /> Block
-                  </button>
-                )}
-              </>
-            )}
-
-            {activeTable === "crops" && row.batchId && (
-              <a
-                href={`${window.location.origin}/trace/${row.batchId}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-2 rounded-md border inline-flex items-center gap-2"
-              >
-                <Info size={14} /> Open Trace
-              </a>
-            )}
-
-            <button
-              onClick={() => exportCSV([row], `${activeTable}_row.csv`)}
-              className="px-3 py-2 rounded-md border inline-flex items-center gap-2"
-            >
-              <Download size={14} /> Export Row
-            </button>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-}
+        ))}
+      </div>
+    </motion.div>
+  </motion.div>
+);

@@ -27,6 +27,8 @@ import Traceability from "./pages/Traceability";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminRegister from "./pages/admin/AdminRegister";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import SystemReports from "./pages/admin/SystemReports";
+
 
 // User Dashboard Router
 import DashboardWrapper from "./pages/DashboardWrapper";
@@ -81,12 +83,9 @@ function AppContent() {
 
           <Route
             path="/trace/:batchId"
-            element={
-              <ProtectedUserRoute>
-                <Traceability />
-              </ProtectedUserRoute>
-            }
+            element={<Traceability />}
           />
+
 
           {/* ADMIN ROUTES */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -100,6 +99,15 @@ function AppContent() {
               </ProtectedAdminRoute>
             }
           />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedAdminRoute>
+                <SystemReports />
+              </ProtectedAdminRoute>
+            }
+          />
+
 
           {/* FALLBACK */}
           <Route path="*" element={<Navigate to="/" />} />

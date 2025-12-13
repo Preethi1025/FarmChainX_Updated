@@ -77,5 +77,10 @@ public ResponseEntity<?> block(@PathVariable String id) {
 public ResponseEntity<?> unblock(@PathVariable String id) {
     return ResponseEntity.ok(adminService.unblockUser(id));
 }
-
+// Add this method to AdminController.java:
+@PutMapping("/role/{id}")
+public ResponseEntity<?> changeRole(@PathVariable String id, 
+                                   @RequestBody Map<String, String> body) {
+    return ResponseEntity.ok(adminService.changeUserRole(id, body.get("role")));
+}
 }
