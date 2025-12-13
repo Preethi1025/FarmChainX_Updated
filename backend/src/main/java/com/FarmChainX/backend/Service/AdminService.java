@@ -62,7 +62,7 @@ public class AdminService {
         stats.put("farmers", userRepository.countByRole("FARMER"));
         stats.put("distributors", userRepository.countByRole("DISTRIBUTOR"));
         stats.put("consumers", userRepository.countByRole("BUYER"));
-        stats.put("admins", userRepository.countByRole("ADMIN")); // ✅ ADD THIS
+        stats.put("admins", userRepository.countByRole("ADMIN")); 
         stats.put("crops", cropRepository.count());
 
         return stats;
@@ -88,25 +88,16 @@ public class AdminService {
         return Map.of("message", "User unblocked");
     }
 
-    public Map<String, String> changeUserRole(String userId, String newRole) {
+    public Map<String, String> changeUserRole(String userId, String role) {
         User user = userRepository.findById(userId).orElse(null);
-        if (user == null)
+        if (user == null) {
             return Map.of("error", "User not found");
-
-        // Prevent changing admin role
-        if ("ADMIN".equals(user.getRole())) {
-            return Map.of("error", "Cannot change admin role");
         }
 
-        // Validate new role
-        List<String> validRoles = Arrays.asList("FARMER", "DISTRIBUTOR", "BUYER");
-        if (!validRoles.contains(newRole)) {
-            return Map.of("error", "Invalid role");
-        }
-
-        user.setRole(newRole);
+        user.setRole(role);
         userRepository.save(user);
-        return Map.of("message", "Role updated successfully");
+
+        return Map.of("message", "Role updated");
     }
 
 }

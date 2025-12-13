@@ -37,23 +37,30 @@ export default function AdminDashboard() {
 
   /* ---------------- LOAD DATA ---------------- */
   const loadData = async () => {
-    const statsRes = await axios.get("http://localhost:8080/api/admin/stats");
+    try {
+      const statsRes = await axios.get("http://localhost:8080/api/admin/stats");
 
-    const farmers = (await axios.get("http://localhost:8080/api/admin/farmers")).data;
-    const distributors = (await axios.get("http://localhost:8080/api/admin/distributors")).data;
-    const consumers = (await axios.get("http://localhost:8080/api/admin/consumers")).data;
-    const cropsRes = await axios.get("http://localhost:8080/api/admin/crops");
+      const farmers = (await axios.get("http://localhost:8080/api/admin/farmers")).data;
+      const distributors = (await axios.get("http://localhost:8080/api/admin/distributors")).data;
+      const consumers = (await axios.get("http://localhost:8080/api/admin/consumers")).data;
+      const admins = (await axios.get("http://localhost:8080/api/admin/admins")).data;
+      const cropsRes = await axios.get("http://localhost:8080/api/admin/crops");
 
-    const allUsers = [...farmers, ...distributors, ...consumers].map(u => {
-      const v = { ...u };
-      delete v.password;
-      return v;
-    });
+      const allUsers = [...farmers, ...distributors, ...consumers, ...admins]
+        .map(u => {
+          const v = { ...u };
+          delete v.password;
+          return v;
+        });
 
-    setStats(statsRes.data);
-    setUsers(allUsers);
-    setCrops(cropsRes.data);
+      setStats(statsRes.data);
+      setUsers(allUsers);
+      setCrops(cropsRes.data);
+    } catch (err) {
+      console.error("Admin dashboard load error:", err);
+    }
   };
+
 
   useEffect(() => {
     loadData();
@@ -203,13 +210,16 @@ export default function AdminDashboard() {
                 ) : (
                   <select
                     value={u.role}
+                    disabled={u.id === admin?.id}
                     onChange={e => setPendingRoleChange({ user: u, role: e.target.value })}
                     className="border rounded px-2 py-1"
                   >
+                    <option value="ADMIN">Admin</option>
                     <option value="FARMER">Farmer</option>
                     <option value="DISTRIBUTOR">Distributor</option>
                     <option value="BUYER">Buyer</option>
                   </select>
+
                 )}
               </Cell>
 

@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation
 } from "react-router-dom";
 
 // Auth Provider
@@ -29,11 +30,10 @@ import AdminRegister from "./pages/admin/AdminRegister";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import SystemReports from "./pages/admin/SystemReports";
 
-
 // User Dashboard Router
 import DashboardWrapper from "./pages/DashboardWrapper";
 
-// Protected Route for Users
+// ---------------- PROTECTED USER ROUTE ----------------
 function ProtectedUserRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -42,26 +42,34 @@ function ProtectedUserRoute({ children }) {
   return user ? children : <Navigate to="/login" />;
 }
 
-// Protected Route for Admin
+// ---------------- PROTECTED ADMIN ROUTE ----------------
 function ProtectedAdminRoute({ children }) {
   const admin = JSON.parse(localStorage.getItem("admin"));
   return admin?.role === "ADMIN" ? children : <Navigate to="/admin/login" />;
 }
 
-// MAIN CONTENT
+// ---------------- MAIN CONTENT ----------------
 function AppContent() {
+  const location = useLocation();
+
+  // Detect admin routes
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
-      <Header />
+      
+      {/* Header ONLY for non-admin pages */}
+      {!isAdminRoute && <Header />}
 
       <main>
         <Routes>
-          {/* PUBLIC ROUTES */}
+
+          {/* -------- PUBLIC ROUTES -------- */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* USER DASHBOARD */}
+          {/* -------- USER DASHBOARD -------- */}
           <Route
             path="/dashboard"
             element={
@@ -71,7 +79,7 @@ function AppContent() {
             }
           />
 
-          {/* PROTECTED USER ROUTES */}
+          {/* -------- PROTECTED USER ROUTES -------- */}
           <Route
             path="/marketplace"
             element={
@@ -81,13 +89,9 @@ function AppContent() {
             }
           />
 
-          <Route
-            path="/trace/:batchId"
-            element={<Traceability />}
-          />
+          <Route path="/trace/:batchId" element={<Traceability />} />
 
-
-          {/* ADMIN ROUTES */}
+          {/* -------- ADMIN ROUTES -------- */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/register" element={<AdminRegister />} />
 
@@ -99,6 +103,7 @@ function AppContent() {
               </ProtectedAdminRoute>
             }
           />
+
           <Route
             path="/admin/reports"
             element={
@@ -108,18 +113,19 @@ function AppContent() {
             }
           />
 
-
-          {/* FALLBACK */}
+          {/* -------- FALLBACK -------- */}
           <Route path="*" element={<Navigate to="/" />} />
+
         </Routes>
       </main>
 
-      <Footer />
+      {/* Footer ONLY for non-admin pages */}
+      {!isAdminRoute && <Footer />}
     </div>
   );
 }
 
-// MAIN APP WRAPPER
+// ---------------- MAIN APP ----------------
 function App() {
   return (
     <AuthProvider>
