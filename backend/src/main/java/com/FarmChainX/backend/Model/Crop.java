@@ -12,8 +12,11 @@ public class Crop {
     @Column(name = "crop_id")
     private Long cropId;
 
-    @Column(name = "farmer_id", nullable = false)
+    @Column(name = "farmer_id")
     private String farmerId;
+
+    @Column(name = "is_blocked")
+    private Boolean blocked = false;
 
     @Column(name = "batch_id")
     private String batchId;
@@ -21,8 +24,10 @@ public class Crop {
     @Column(name = "crop_name")
     private String cropName;
 
-    private String price;
+    @Column(name = "price")
+    private Double price;
     private String quantity;
+
     private String description;
 
     @Column(name = "created_at")
@@ -35,6 +40,7 @@ public class Crop {
     private String cropType;
 
     private String variety;
+
     private String location;
 
     @Column(name = "qr_code_url")
@@ -69,30 +75,52 @@ public class Crop {
     @Column(columnDefinition = "TEXT")
     private String traceLog;
 
-    @Column(name = "is_blocked")
-    private Boolean blocked = false;
+    // ---------- getters / setters ----------
 
-    // ---------------- GETTERS & SETTERS ----------------
-    public Long getCropId() { return cropId; }
-    public void setCropId(Long cropId) { this.cropId = cropId; }
+    public Long getCropId() {
+        return cropId;
+    }
 
-    public String getFarmerId() { return farmerId; }
-    public void setFarmerId(String farmerId) { this.farmerId = farmerId; }
+    public void setCropId(Long cropId) {
+        this.cropId = cropId;
+    }
 
-    public String getBatchId() { return batchId; }
-    public void setBatchId(String batchId) { this.batchId = batchId; }
+    public String getFarmerId() {
+        return farmerId;
+    }
 
-    public String getCropName() { return cropName; }
-    public void setCropName(String cropName) { this.cropName = cropName; }
+    public void setFarmerId(String farmerId) {
+        this.farmerId = farmerId;
+    }
 
-    public String getPrice() { return price; }
-    public void setPrice(String price) { this.price = price; }
+    // Updated blocked getter/setter to use Boolean consistently
+    public Boolean getBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(Boolean blocked) {
+        this.blocked = blocked;
+    }
+
+    public String getCropName() {
+        return cropName;
+    }
+
+    public void setCropName(String cropName) {
+        this.cropName = cropName;
+    }
+
+    public Double getPrice() { return price; }
+    public void setPrice(Double price) { this.price = price; }
 
     public String getQuantity() { return quantity; }
     public void setQuantity(String quantity) { this.quantity = quantity; }
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getBatchId() { return batchId; }
+    public void setBatchId(String batchId) { this.batchId = batchId; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
@@ -141,7 +169,4 @@ public class Crop {
 
     public String getTraceLog() { return traceLog; }
     public void setTraceLog(String traceLog) { this.traceLog = traceLog; }
-
-    public Boolean getBlocked() { return blocked; }
-    public void setBlocked(Boolean blocked) { this.blocked = blocked; }
 }

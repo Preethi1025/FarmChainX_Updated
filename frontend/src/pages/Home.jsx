@@ -84,9 +84,8 @@ const Home = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link to="/register" className="btn-primary bg-white text-primary-700 hover:bg-gray-50 text-lg px-8 py-4">
                 Start Your Journey
-                <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
-              <Link to="/marketplace" className="btn-secondary border-white text-white hover:bg-white/20 text-lg px-8 py-4">
+               <Link to="/marketplace" className="btn-primary bg-white text-primary-700 hover:bg-gray-50 text-lg px-8 py-4">
                 Explore Marketplace
               </Link>
             </div>
@@ -193,7 +192,7 @@ const Home = () => {
               <Link to="/register" className="btn-primary bg-white text-primary-700 hover:bg-gray-50">
                 Join as Farmer
               </Link>
-              <Link to="/register" className="btn-secondary border-white text-white hover:bg-white/20">
+              <Link to="/register" className="btn-primary bg-white text-primary-700 hover:bg-gray-50">
                 Join as Buyer
               </Link>
             </div>

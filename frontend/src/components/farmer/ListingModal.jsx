@@ -17,17 +17,14 @@ export default function ListingModal({ crop, onClose, onSuccess }) {
       batchId: crop.batchId,
       price: Number(price),
       quantity: Number(quantity),
-      status: "ACTIVE"
+      status: "PENDING", // ✅ Do not auto-activate
     };
 
     try {
-      const response = await axios.post("http://localhost:8080/api/listings/create", payload);
+      await axios.post("http://localhost:8080/api/listings/create", payload);
+      alert("Listing submitted for distributor approval!");
 
-      alert("Listing created successfully!");
-
-      // Update parent UI state
       if (onSuccess) onSuccess({ cropId: crop.cropId });
-
       onClose();
     } catch (err) {
       console.error("Error Creating Listing:", err.response?.data || err);
@@ -45,7 +42,7 @@ export default function ListingModal({ crop, onClose, onSuccess }) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-semibold mb-4">
-          Create Listing for: {crop.cropName}
+          List Crop for Sale: {crop.cropName}
         </h2>
 
         <label className="block text-sm font-medium mb-2">Price (₹)</label>
@@ -56,7 +53,7 @@ export default function ListingModal({ crop, onClose, onSuccess }) {
           onChange={(e) => setPrice(e.target.value)}
         />
 
-        <label className="block text-sm font-medium mb-2">Quantity</label>
+        <label className="block text-sm font-medium mb-2">Quantity (kg)</label>
         <input
           type="number"
           className="border p-2 rounded w-full mb-4"
@@ -71,12 +68,11 @@ export default function ListingModal({ crop, onClose, onSuccess }) {
           >
             Cancel
           </button>
-
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             onClick={handleSubmit}
           >
-            Create Listing
+            Submit for Approval
           </button>
         </div>
       </div>

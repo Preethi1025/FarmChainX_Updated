@@ -1,35 +1,52 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
-import { AuthProvider, useAuth } from './context/AuthContext';
+// Auth Provider
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
+// Common Components
 import Header from "./components/common/Header";
 import Footer from "./components/common/Footer";
+import { PageLoader } from "./components/common/LoadingSpinner";
 
-import Home from "./pages/Home";
+// User Auth Pages
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
 
+// Public Pages
+import Home from "./pages/Home";
 import Marketplace from "./pages/Marketplace";
 import Traceability from "./pages/Traceability";
 
-import { PageLoader } from "./components/common/LoadingSpinner";
-import DashboardWrapper from './pages/DashboardWrapper'; // role-based dashboard wrapper
+// Admin Pages
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminRegister from "./pages/admin/AdminRegister";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
-// --------------------------------------------
-// Protected Route Wrapper
-// --------------------------------------------
-const ProtectedRoute = ({ children }) => {
+// User Dashboard Router
+import DashboardWrapper from "./pages/DashboardWrapper";
+
+// Protected Route for Users
+function ProtectedUserRoute({ children }) {
   const { user, loading } = useAuth();
 
   if (loading) return <PageLoader />;
 
   return user ? children : <Navigate to="/login" />;
-};
+}
 
-// --------------------------------------------
-// Main App Content
-// --------------------------------------------
+// Protected Route for Admin
+function ProtectedAdminRoute({ children }) {
+  const admin = JSON.parse(localStorage.getItem("admin"));
+  return admin?.role === "ADMIN" ? children : <Navigate to="/admin/login" />;
+}
+
+// MAIN CONTENT
 function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
@@ -37,40 +54,54 @@ function AppContent() {
 
       <main>
         <Routes>
-          {/* Public Routes */}
+          {/* PUBLIC ROUTES */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Role-based Dashboard */}
+          {/* USER DASHBOARD */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedUserRoute>
                 <DashboardWrapper />
-              </ProtectedRoute>
+              </ProtectedUserRoute>
             }
           />
 
-          {/* Other Routes */}
+          {/* PROTECTED USER ROUTES */}
           <Route
             path="/marketplace"
             element={
-              <ProtectedRoute>
+              <ProtectedUserRoute>
                 <Marketplace />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/trace/:batchId"
-            element={
-              <ProtectedRoute>
-                <Traceability />
-              </ProtectedRoute>
+              </ProtectedUserRoute>
             }
           />
 
-          {/* Redirect All Unknown Paths */}
+          <Route
+            path="/trace/:batchId"
+            element={
+              <ProtectedUserRoute>
+                <Traceability />
+              </ProtectedUserRoute>
+            }
+          />
+
+          {/* ADMIN ROUTES */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
+
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedAdminRoute>
+                <AdminDashboard />
+              </ProtectedAdminRoute>
+            }
+          />
+
+          {/* FALLBACK */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
@@ -80,9 +111,7 @@ function AppContent() {
   );
 }
 
-// --------------------------------------------
-// App Wrapper With AuthProvider
-// --------------------------------------------
+// MAIN APP WRAPPER
 function App() {
   return (
     <AuthProvider>

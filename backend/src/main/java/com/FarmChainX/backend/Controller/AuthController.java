@@ -3,11 +3,14 @@ package com.FarmChainX.backend.Controller;
 import com.FarmChainX.backend.Model.User;
 import com.FarmChainX.backend.Service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin("*")
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin("*")
 public class AuthController {
 
     @Autowired
@@ -19,15 +22,29 @@ public class AuthController {
         return "Registration Successful!";
     }
 
-    @PostMapping("/login")
-    public Object login(@RequestBody User loginRequest) {
+   @PostMapping("/login")
+public ResponseEntity<?> login(@RequestBody User loginRequest) {
 
-        boolean success = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
+    User user = authService.getUser(loginRequest.getEmail());
 
-        if (success) {
-            return authService.getUser(loginRequest.getEmail());
-        } else {
-            return "Invalid email or password!";
-        }
+    if (user == null) {
+        return ResponseEntity.status(401).body(Map.of("error", "User not found"));
     }
+
+    if (Boolean.TRUE.equals(user.getBlocked())) {
+        return ResponseEntity.status(403)
+                .body(Map.of("error", "User is blocked"));
+    }
+
+    boolean success = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
+
+    if (!success) {
+        return ResponseEntity.status(401)
+                .body(Map.of("error", "Invalid password"));
+    }
+
+    user.setPassword(null);
+    return ResponseEntity.ok(user);
+}
+
 }

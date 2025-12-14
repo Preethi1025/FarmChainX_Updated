@@ -3,7 +3,6 @@ package com.FarmChainX.backend.Model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "batch_records")
@@ -12,8 +11,20 @@ public class BatchRecord {
     @Id
     @Column(name = "batch_id", nullable = false, unique = true)
     private String batchId;
+    @Column(length = 500)
+    private String rejectionReason;
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
 
-    @Column(name = "farmer_id", nullable = false)
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
+
+    // ❌ Removed invalid @ManyToOne crop relationship
+
+    @Column(name = "farmer_id")
     private String farmerId;
 
     @Column(name = "distributor_id")
@@ -31,7 +42,7 @@ public class BatchRecord {
     @Column(name = "harvest_date")
     private LocalDate harvestDate;
 
-    @Column(name = "status", nullable = false)
+    @Column(name = "status")
     private String status = "PLANTED";
 
     @Column(name = "is_blocked")
@@ -52,12 +63,8 @@ public class BatchRecord {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // One batch can have multiple crops (one-to-many)
-    @OneToMany
-    @JoinColumn(name = "batch_id", referencedColumnName = "batch_id")
-    private List<Crop> crops;
+    // Getters & Setters
 
-    // ---------------- GETTERS & SETTERS ----------------
     public String getBatchId() { return batchId; }
     public void setBatchId(String batchId) { this.batchId = batchId; }
 
@@ -99,7 +106,4 @@ public class BatchRecord {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    public List<Crop> getCrops() { return crops; }
-    public void setCrops(List<Crop> crops) { this.crops = crops; }
 }

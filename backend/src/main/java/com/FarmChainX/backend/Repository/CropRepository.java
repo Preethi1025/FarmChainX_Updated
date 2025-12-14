@@ -2,17 +2,16 @@ package com.FarmChainX.backend.Repository;
 
 import com.FarmChainX.backend.Model.Crop;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
+@Repository
 public interface CropRepository extends JpaRepository<Crop, Long> {
 
-   List<Crop> findByFarmerId(String farmerId);
-
-   List<Crop> findByFarmerIdAndStatus(String farmerId, String status);
-
+   // Used for split / merge logic
    List<Crop> findByBatchId(String batchId);
 
-   List<Crop> findByStatus(String status);  // ADDED for marketplace filtering
-
-   List<Crop> findByBatchIdAndStatus(String batchId, String status);
+   // Used for farmer crop listing
+   List<Crop> findByFarmerId(String farmerId);
 }

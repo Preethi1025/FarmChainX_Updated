@@ -1,6 +1,9 @@
 // src/components/batches/BatchManagement.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import API from "../../api";
+
+
 import { QRCodeSVG } from "qrcode.react";
 import {
   ChevronDown,
@@ -121,29 +124,33 @@ const BatchManagement = ({ onClose }) => {
   const handleStatusChange = (batchId, newStatus) =>
     setStatusUpdate((prev) => ({ ...prev, [batchId]: newStatus }));
 
-  const applyStatusUpdate = async (batchId) => {
-    const newStatus = statusUpdate[batchId];
-    if (!newStatus) {
-      alert("Please select a status first.");
-      return;
-    }
-    try {
-      setLoadingRow(batchId);
-      await axios.put(`${apiBase}/${batchId}/status`, {
-        status: newStatus,
-        userId: user.id,
-      });
-      setBatches((prev) =>
-        prev.map((b) => (b.batchId === batchId ? { ...b, status: newStatus } : b))
-      );
-      alert("Batch status updated!");
-    } catch (err) {
-      console.error("Error updating batch status:", err);
-      alert("Failed to update status.");
-    } finally {
-      setLoadingRow(null);
-    }
-  };
+const applyStatusUpdate = async (batchId) => {
+  const newStatus = statusUpdate[batchId];
+  if (!newStatus) {
+    alert("Please select a status first.");
+    return;
+  }
+
+  try {
+    setLoadingRow(batchId);
+    await axios.put(`${apiBase}/${batchId}/status`, {
+      status: newStatus,
+      userId: user.id,
+    });
+    setBatches(prev =>
+      prev.map(b =>
+        b.batchId === batchId ? { ...b, status: newStatus } : b
+      )
+    );
+
+    alert("Batch status updated!");
+  } catch (err) {
+    console.error("Error updating batch status:", err);
+    alert("Failed to update status.");
+  } finally {
+    setLoadingRow(null);
+  }
+};
 
   // QUALITY: use status update workaround to avoid 404 (backend lacks dedicated /quality endpoint)
   const handleQualityChange = (batchId, field, value) =>
@@ -217,38 +224,54 @@ const BatchManagement = ({ onClose }) => {
   };
 
   // MERGE: use the controller endpoint POST /merge/{targetBatchId} with body { sourceBatchIds, userId }
-  const handleMergeBatch = async (sourceBatchId) => {
-    const targetBatchId = mergeTarget[sourceBatchId];
-    if (!targetBatchId) {
-      alert("Select a target batch to merge into.");
-      return;
-    }
-    if (targetBatchId === sourceBatchId) {
-      alert("Source and target cannot be the same batch.");
-      return;
-    }
-    if (!window.confirm(`All crops from ${sourceBatchId} will be moved into ${targetBatchId}. Continue?`)) return;
-    try {
-      setLoadingRow(sourceBatchId);
-      const res = await axios.post(`${apiBase}/merge/${targetBatchId}`, {
+const handleMergeBatch = async (sourceBatchId) => {
+  const targetBatchId = mergeTarget[sourceBatchId];
+
+  if (!targetBatchId) {
+    alert("Select a target batch to merge into.");
+    return;
+  }
+
+  if (targetBatchId === sourceBatchId) {
+    alert("Source and target cannot be the same batch.");
+    return;
+  }
+
+  if (!window.confirm(
+    `All crops from ${sourceBatchId} will be moved into ${targetBatchId}. Continue?`
+  )) return;
+
+  try {
+    setLoadingRow(sourceBatchId);
+
+    const res = await API.post(
+      `/batches/merge/${targetBatchId}`,
+      {
         sourceBatchIds: [sourceBatchId],
         userId: user.id,
-      });
-      const updatedTarget = res.data;
-      // Remove source and update target in local state
-      setBatches((prev) =>
-        prev
-          .filter((b) => b.batchId !== sourceBatchId)
-          .map((b) => (b.batchId === targetBatchId ? { ...b, ...updatedTarget } : b))
-      );
-      alert("Batches merged successfully!");
-    } catch (err) {
-      console.error("Error merging batches:", err);
-      alert(err.response?.data?.error || "Failed to merge batches. Check if both batches exist and have same crop type.");
-    } finally {
-      setLoadingRow(null);
-    }
-  };
+      }
+    );
+
+    // ✅ Filter out merged batch immediately from frontend state
+    setBatches(prev =>
+      prev
+        .filter(b => b.batchId !== sourceBatchId) // remove the merged batch
+        .map(b => b.batchId === targetBatchId ? res.data.find(r => r.batchId === targetBatchId) || b : b) // update target batch info
+    );
+
+    alert("Batch merged successfully!");
+  } catch (err) {
+    console.error("Error merging batches:", err);
+    alert(
+      err.response?.data?.error ||
+      "Failed to merge batches. Ensure both batches exist and have same crop type."
+    );
+  } finally {
+    setLoadingRow(null);
+  }
+};
+
+
 
   // Approve / Reject (distributor actions)
   const approveBatch = async (batchId) => {
