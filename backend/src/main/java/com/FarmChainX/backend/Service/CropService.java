@@ -29,7 +29,7 @@ public class CropService {
         if (crop.getCropName() == null || crop.getCropName().isEmpty()) {
             throw new IllegalArgumentException("cropName is required");
         }
-        if (crop.getPrice() == null || crop.getPrice().isEmpty()) {
+        if (crop.getPrice() == null) {
             throw new IllegalArgumentException("price is required");
         }
         if (crop.getQuantity() == null || crop.getQuantity().isEmpty()) {

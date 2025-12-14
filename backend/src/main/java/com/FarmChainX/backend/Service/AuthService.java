@@ -19,19 +19,30 @@ public class AuthService {
     // ---------------- REGISTER ----------------
     public User register(User user) {
 
-        // 🔴 BLOCK duplicate email across ALL roles
-        if (userRepository.findByEmail(user.getEmail()) != null) {
-            throw new IllegalArgumentException("Email already exists");
-        }
+        // 🔹 Generate role-based short ID (e.g., FAR-3A9F2C)
+        String prefix = (user.getRole() != null && user.getRole().length() >= 3)
+                ? user.getRole().substring(0, 3).toUpperCase()
+                : "USR";
 
-        user.setId(UUID.randomUUID().toString());
+        String shortId = UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 6);
+
+        user.setId(prefix + "-" + shortId);
+
+        // 🔹 Hash password
         user.setPassword(encoder.encode(user.getPassword()));
 
+        // 🔹 Default role if not provided
         if (user.getRole() == null || user.getRole().isEmpty()) {
             user.setRole("BUYER");
         }
 
-        user.setBlocked(false);
+        // 🔹 Default blocked status
+        if (user.getBlocked() == null) {
+            user.setBlocked(false);
+        }
 
         return userRepository.save(user);
     }
@@ -48,7 +59,6 @@ public class AuthService {
         return encoder.matches(password, user.getPassword());
     }
 
-    // ---------------- GET USER ----------------
     public User getUser(String email) {
         return userRepository.findByEmail(email);
     }

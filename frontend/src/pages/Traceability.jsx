@@ -30,7 +30,6 @@ const Traceability = () => {
 
   if (loading) return <div className="text-center py-10 text-lg">Loading...</div>;
 
-  // ✨ Beautiful date-time formatter
   const formatDateTime = (isoDate) => {
     const date = new Date(isoDate);
     return date.toLocaleString("en-IN", {
@@ -70,7 +69,6 @@ const Traceability = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-4xl mx-auto px-4">
-
         {/* Header */}
         <div className="bg-gradient-to-r from-green-600 to-green-400 text-white rounded-2xl p-6 shadow-lg mb-8">
           <h1 className="text-3xl font-bold">Batch Traceability</h1>
@@ -81,7 +79,6 @@ const Traceability = () => {
 
         {/* Info Cards */}
         <div className="grid md:grid-cols-3 gap-5 mb-8">
-
           {/* Farmer */}
           <div className="bg-white shadow-md rounded-xl p-5 flex items-center space-x-4 border border-gray-200">
             <div className="p-3 bg-green-100 rounded-full">
@@ -114,7 +111,6 @@ const Traceability = () => {
               <p className="text-lg font-semibold">{distributorId}</p>
             </div>
           </div>
-
         </div>
 
         {/* Timeline */}
@@ -159,7 +155,6 @@ const Traceability = () => {
             );
           })}
         </div>
-
       </div>
     </div>
   );

@@ -24,7 +24,8 @@ public class Crop {
     @Column(name = "crop_name")
     private String cropName;
 
-    private String price;
+    @Column(name = "price")
+    private Double price;
     private String quantity;
 
     private String description;
@@ -109,8 +110,8 @@ public class Crop {
         this.cropName = cropName;
     }
 
-    public String getPrice() { return price; }
-    public void setPrice(String price) { this.price = price; }
+    public Double getPrice() { return price; }
+    public void setPrice(Double price) { this.price = price; }
 
     public String getQuantity() { return quantity; }
     public void setQuantity(String quantity) { this.quantity = quantity; }

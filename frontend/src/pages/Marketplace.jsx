@@ -12,7 +12,24 @@ const Marketplace = () => {
   const fetchProducts = async () => {
     try {
       const res = await axios.get("http://localhost:8080/api/listings/");
-      setProducts(Array.isArray(res.data) ? res.data : []);
+      const listings = Array.isArray(res.data) ? res.data : [];
+
+      // ✅ Show only ACTIVE listings
+      const productsWithPrice = listings
+        .filter(listing => 
+  listing.status === "ACTIVE" || listing.status === "APPROVED"
+)
+
+        .map(listing => ({
+          ...listing,
+          price: listing.price || listing.batch?.price || 0,
+          cropName: listing.cropName || listing.batch?.cropName || "Unknown Crop",
+          quantity: listing.quantity || listing.batch?.totalQuantity || 0,
+          qualityGrade: listing.qualityGrade || listing.batch?.avgQualityScore || "Not Graded",
+          traceUrl: listing.traceUrl || `/trace/${listing.batchId}`,
+        }));
+
+      setProducts(productsWithPrice);
     } catch (error) {
       console.error("Error loading listings:", error);
     } finally {
@@ -33,15 +50,8 @@ const Marketplace = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen text-gray-600 text-lg">
-        Loading Marketplace...
-      </div>
-    );
-  }
+  if (loading) return <div className="flex justify-center items-center h-screen text-gray-600 text-lg">Loading Marketplace...</div>;
 
-  // ⭐ UNIVERSAL BUTTON STYLE (same for all)
   const buttonClass =
     "w-full border border-primary-500 text-primary-600 hover:bg-primary-50 py-2 rounded-lg shadow flex items-center justify-center space-x-2 transition";
 
@@ -54,15 +64,10 @@ const Marketplace = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Marketplace</h1>
-              <p className="text-gray-600 mt-2">
-                Buy fresh, traceable products directly from farmers
-              </p>
+              <p className="text-gray-600 mt-2">Buy fresh, traceable products directly from farmers</p>
             </div>
 
-            <button
-              onClick={() => setShowScanner(true)}
-              className="btn-primary mt-4 lg:mt-0 flex items-center space-x-2"
-            >
+            <button onClick={() => setShowScanner(true)} className="btn-primary mt-4 lg:mt-0 flex items-center space-x-2">
               <Scan className="h-4 w-4" />
               <span>Scan QR Code</span>
             </button>
@@ -70,71 +75,33 @@ const Marketplace = () => {
         </motion.div>
 
         {/* Products Grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {products.length === 0 ? (
-            <p className="text-center text-gray-500 col-span-full py-8">
-              🚫 No active listings available.
-            </p>
+            <p className="text-center text-gray-500 col-span-full py-8">🚫 No active listings available.</p>
           ) : (
             products.map((product) => (
-              <motion.div
-                key={product.listingId}
-                className="card-hover bg-white rounded-xl shadow p-4 flex flex-col justify-between"
-                whileHover={{ scale: 1.02 }}
-              >
+              <motion.div key={product.listingId} className="card-hover bg-white rounded-xl shadow p-4 flex flex-col justify-between" whileHover={{ scale: 1.02 }}>
                 <div>
-                  {/* Placeholder image */}
-                  <div className="h-40 bg-green-100 flex items-center justify-center rounded-lg mb-3 text-4xl">
-                    🌿
-                  </div>
+                  <div className="h-40 bg-green-100 flex items-center justify-center rounded-lg mb-3 text-4xl">🌿</div>
 
                   <h2 className="text-lg font-semibold capitalize">{product.cropName}</h2>
                   <p className="text-sm text-gray-600">Farmer: {product.farmerId}</p>
 
                   <p className="mt-2 text-xl font-bold text-green-700">
-                    ₹{product.price}
+                    ₹{Number(product.price).toFixed(2)}
                     <span className="text-sm text-gray-600"> / kg</span>
                   </p>
 
                   <p className="text-sm text-gray-500">Available: {product.quantity} kg</p>
-
                   <p className={`text-xs mt-1 px-2 py-1 inline-block rounded ${getQualityColor(product.qualityGrade)}`}>
                     Grade: {product.qualityGrade || "Not Graded"}
                   </p>
                 </div>
 
-                {/* Buttons — SAME styling for all */}
                 <div className="mt-4 flex flex-col space-y-2">
-
-                  {/* BUY NOW */}
-                  <button className={buttonClass}>
-                    <Wallet className="h-4 w-4" />
-                    <span>Buy Now</span>
-                  </button>
-
-                  {/* ADD TO CART */}
-                  <button className={buttonClass}>
-                    <ShoppingCart className="h-4 w-4" />
-                    <span>Add to Cart</span>
-                  </button>
-
-                  {/* TRACE ORIGIN */}
-                  <button
-                    onClick={() => {
-                      if (product.traceUrl) window.open(product.traceUrl, "_blank");
-                      else alert("Traceability URL not available");
-                    }}
-                    className={buttonClass}
-                  >
-                    <Sprout className="h-4 w-4" />
-                    <span>Trace Origin</span>
-                  </button>
-
+                  <button className={buttonClass}><Wallet className="h-4 w-4" /><span>Buy Now</span></button>
+                  <button className={buttonClass}><ShoppingCart className="h-4 w-4" /><span>Add to Cart</span></button>
+                  <button onClick={() => product.traceUrl ? window.open(product.traceUrl, "_blank") : alert("Traceability URL not available")} className={buttonClass}><Sprout className="h-4 w-4" /><span>Trace Origin</span></button>
                 </div>
               </motion.div>
             ))
@@ -142,12 +109,7 @@ const Marketplace = () => {
         </motion.div>
       </div>
 
-      {showScanner && (
-        <QRScanner
-          onScan={() => setShowScanner(false)}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
+      {showScanner && <QRScanner onScan={() => setShowScanner(false)} onClose={() => setShowScanner(false)} />}
     </div>
   );
 };

@@ -66,7 +66,7 @@ public class ListingController {
     @PostMapping("/create")
     public Listing createListing(@RequestBody Listing listing) {
         System.out.println("📥 Incoming Listing Request: " + listing);
-        return listingService.createListing(listing);
+        return listingService.createOrActivateListing(listing);
     }
 
     // ✅ Distributor approves listing (ACTIVE status)

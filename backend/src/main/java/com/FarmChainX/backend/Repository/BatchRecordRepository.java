@@ -13,4 +13,7 @@ public interface BatchRecordRepository extends JpaRepository<BatchRecord, String
 
     List<BatchRecord> findByDistributorIdAndStatus(String distributorId, String status);
 
+    List<BatchRecord> findByStatusIn(List<String> statuses);
+    List<BatchRecord> findByFarmerIdAndBlockedFalse(String farmerId);
+
 }

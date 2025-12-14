@@ -4,16 +4,18 @@ import BatchCard from "./BatchCard";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
 import { Clock, CheckCircle2, ListChecks } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+const API_BASE = "http://localhost:8080/api";
 
 const DistributorDashboard = () => {
   const { user } = useAuth();
   const distributorId = user?.id;
+  const navigate = useNavigate();
 
   const [pending, setPending] = useState([]);
   const [approved, setApproved] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const API_BASE = "http://localhost:8080/api";
 
   useEffect(() => {
     if (!distributorId) return;
@@ -23,13 +25,38 @@ const DistributorDashboard = () => {
   const fetchBatches = async () => {
     setLoading(true);
     try {
+      // 1️⃣ Fetch batches
       const [pendingRes, approvedRes] = await Promise.all([
         axios.get(`${API_BASE}/batches/pending`),
-        axios.get(`${API_BASE}/batches/approved/${distributorId}`)
+        axios.get(`${API_BASE}/batches/approved/${distributorId}`),
       ]);
 
-      setPending(pendingRes.data || []);
-      setApproved(approvedRes.data || []);
+      // 2️⃣ Attach price to each batch
+      const enrichWithPrice = async (batches) => {
+        return Promise.all(
+          batches.map(async (batch) => {
+            try {
+              const cropRes = await axios.get(
+                `${API_BASE}/crops/by-batch`,
+                { params: { batchId: batch.batchId } }
+              );
+
+              const crops = cropRes.data || [];
+              const price =
+                crops.length > 0 && crops[0].price != null
+                  ? crops[0].price
+                  : null;
+
+              return { ...batch, price };
+            } catch {
+              return { ...batch, price: null };
+            }
+          })
+        );
+      };
+
+      setPending(await enrichWithPrice(pendingRes.data || []));
+      setApproved(await enrichWithPrice(approvedRes.data || []));
     } catch (e) {
       console.error("Failed to load batches:", e);
       alert("Failed to load batches");
@@ -44,7 +71,7 @@ const DistributorDashboard = () => {
         `${API_BASE}/batches/distributor/approve/${batchId}/${distributorId}`
       );
       fetchBatches();
-    } catch (e) {
+    } catch {
       alert("Approve failed");
     }
   };
@@ -60,9 +87,13 @@ const DistributorDashboard = () => {
         { reason }
       );
       fetchBatches();
-    } catch (e) {
+    } catch {
       alert("Reject failed");
     }
+  };
+
+  const handleTrace = (batchId) => {
+    navigate(`/trace/${batchId}`);
   };
 
   if (!distributorId)
@@ -86,7 +117,7 @@ const DistributorDashboard = () => {
         </p>
       </motion.div>
 
-      {/* STATS CARDS */}
+      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <StatsCard
           icon={<Clock size={28} />}
@@ -94,14 +125,12 @@ const DistributorDashboard = () => {
           value={pending.length}
           bg="from-yellow-50 to-yellow-100"
         />
-
         <StatsCard
           icon={<CheckCircle2 size={28} />}
           label="Approved Batches"
           value={approved.length}
           bg="from-green-50 to-green-100"
         />
-
         <StatsCard
           icon={<ListChecks size={28} />}
           label="Total Processed"
@@ -110,33 +139,37 @@ const DistributorDashboard = () => {
         />
       </div>
 
-      {/* PENDING SECTION */}
+      {/* PENDING */}
       <SectionHeading title="Pending Batches" />
-
       {pending.length === 0 ? (
-        <p className="text-gray-600 mt-2">No pending batches.</p>
+        <p className="text-gray-600">No pending batches.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {pending.map((batch) => (
             <BatchCard
               key={batch.batchId}
               batch={batch}
-              onApprove={() => handleApprove(batch.batchId)}
-              onReject={() => handleReject(batch.batchId)}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onTrace={handleTrace}
             />
           ))}
         </div>
       )}
 
-      {/* APPROVED SECTION */}
+      {/* APPROVED */}
       <SectionHeading title="Approved Batches" className="mt-12" />
-
       {approved.length === 0 ? (
-        <p className="text-gray-600 mt-2">No approved batches yet.</p>
+        <p className="text-gray-600">No approved batches yet.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {approved.map((batch) => (
-            <BatchCard key={batch.batchId} batch={batch} readOnly />
+            <BatchCard
+              key={batch.batchId}
+              batch={batch}
+              readOnly
+              onTrace={handleTrace}
+            />
           ))}
         </div>
       )}
@@ -146,7 +179,7 @@ const DistributorDashboard = () => {
 
 export default DistributorDashboard;
 
-/* -------------------------------------------- */
+/* -------------------- */
 
 const StatsCard = ({ icon, label, value, bg }) => (
   <motion.div

@@ -11,6 +11,16 @@ public class BatchRecord {
     @Id
     @Column(name = "batch_id", nullable = false, unique = true)
     private String batchId;
+    @Column(length = 500)
+    private String rejectionReason;
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
 
     // ❌ Removed invalid @ManyToOne crop relationship
 
