@@ -1,20 +1,29 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 
-import DistributorDashboard from '../components/Distributor/DistributorDashboard';
-import FarmerDashboard from '../components/farmer/FarmerDashboard';
-import Dashboard from './Dashboard';
+import Dashboard from "./Dashboard";
+import DistributorDashboard from "../components/Distributor/DistributorDashboard";
 
-// import ConsumerDashboard from '../components/consumer/ConsumerDashboard'; // Uncomment when ready
+import ConsumerDashboard from "./ConsumerDashboard";
 
 const DashboardWrapper = () => {
-  const role = localStorage.getItem("userRole"); // persist role after login
+  const { user } = useAuth();
 
-  if (role === "DISTRIBUTOR") return <DistributorDashboard />;
-  if (role === "FARMER") return <Dashboard />;
-  // if (role === "CONSUMER") return <ConsumerDashboard />;
+  if (!user) return <Navigate to="/login" replace />;
 
-  return <Navigate to="/login" />; // fallback if role missing
+  switch (user.role) {
+    case "FARMER":
+      return <Dashboard />;
+
+    case "DISTRIBUTOR":
+      return <DistributorDashboard />;
+
+    case "BUYER":
+      return <ConsumerDashboard />;
+
+    default:
+      return <Navigate to="/login" replace />;
+  }
 };
 
 export default DashboardWrapper;

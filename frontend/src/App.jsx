@@ -5,16 +5,19 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-
-// Auth Provider
+import MyOrders from "./pages/MyOrders";
+// Auth
 import { AuthProvider, useAuth } from "./context/AuthContext";
+
+// Protected Route (OUTLET BASED)
+import ProtectedUserRoute from "./routes/ProtectedUserRoute";
 
 // Common Components
 import Header from "./components/common/Header";
 import Footer from "./components/common/Footer";
 import { PageLoader } from "./components/common/LoadingSpinner";
 
-// User Auth Pages
+// Auth Pages
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
 
@@ -28,81 +31,43 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminRegister from "./pages/admin/AdminRegister";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
-// User Dashboard Router
+// Dashboards
 import DashboardWrapper from "./pages/DashboardWrapper";
 
-// Protected Route for Users
-function ProtectedUserRoute({ children }) {
-  const { user, loading } = useAuth();
+/* ---------------- APP CONTENT ---------------- */
+
+function AppContent() {
+  const { loading } = useAuth();
 
   if (loading) return <PageLoader />;
 
-  return user ? children : <Navigate to="/login" />;
-}
-
-// Protected Route for Admin
-function ProtectedAdminRoute({ children }) {
-  const admin = JSON.parse(localStorage.getItem("admin"));
-  return admin?.role === "ADMIN" ? children : <Navigate to="/admin/login" />;
-}
-
-// MAIN CONTENT
-function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
       <Header />
 
       <main>
         <Routes>
-          {/* PUBLIC ROUTES */}
+          {/* -------- PUBLIC -------- */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* USER DASHBOARD */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedUserRoute>
-                <DashboardWrapper />
-              </ProtectedUserRoute>
-            }
-          />
+          {/* -------- PROTECTED USER ROUTES -------- */}
+         <Route element={<ProtectedUserRoute />}>
+  <Route path="/dashboard" element={<DashboardWrapper />} />
+  <Route path="/marketplace" element={<Marketplace />} />
+  <Route path="/my-orders" element={<MyOrders />} />
+  <Route path="/trace" element={<Traceability />} />
+  <Route path="/trace/:batchId" element={<Traceability />} />
+</Route>
 
-          {/* PROTECTED USER ROUTES */}
-          <Route
-            path="/marketplace"
-            element={
-              <ProtectedUserRoute>
-                <Marketplace />
-              </ProtectedUserRoute>
-            }
-          />
-
-          <Route
-            path="/trace/:batchId"
-            element={
-              <ProtectedUserRoute>
-                <Traceability />
-              </ProtectedUserRoute>
-            }
-          />
-
-          {/* ADMIN ROUTES */}
+          {/* -------- ADMIN -------- */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/register" element={<AdminRegister />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedAdminRoute>
-                <AdminDashboard />
-              </ProtectedAdminRoute>
-            }
-          />
-
-          {/* FALLBACK */}
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* -------- FALLBACK -------- */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
@@ -111,8 +76,9 @@ function AppContent() {
   );
 }
 
-// MAIN APP WRAPPER
-function App() {
+/* ---------------- MAIN APP ---------------- */
+
+export default function App() {
   return (
     <AuthProvider>
       <Router>
@@ -121,5 +87,3 @@ function App() {
     </AuthProvider>
   );
 }
-
-export default App;

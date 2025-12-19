@@ -94,42 +94,49 @@ public class BatchService {
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
 
-        // Prevent re-approval
         if ("APPROVED".equals(batch.getStatus())) {
             return batch;
         }
 
-        // Update batch
         batch.setStatus("APPROVED");
         batch.setDistributorId(distributorId);
         batch.setUpdatedAt(LocalDateTime.now());
 
-        // Fetch crops under this batch
         List<Crop> crops = cropRepository.findByBatchId(batchId);
 
         for (Crop crop : crops) {
+
+            double farmerPrice = crop.getPrice() != null ? crop.getPrice() : 0.0;
+
+            // 💰 Profit calculation
+            double farmerProfit = farmerPrice * 0.10;        // 10%
+            double distributorProfit = farmerPrice * 0.10;   // 10%
+
+            double finalMarketPrice = farmerPrice + farmerProfit + distributorProfit;
 
             Listing listing = new Listing();
             listing.setBatchId(batchId);
             listing.setFarmerId(batch.getFarmerId());
             listing.setCropId(crop.getCropId());
+            listing.setDistributorId(distributorId);
 
-            // Quantity from crop
             listing.setQuantity(
                     crop.getQuantity() != null ? Double.parseDouble(crop.getQuantity()) : 0.0
             );
 
-            // ✅ PRICE MUST COME FROM CROP (OR EXISTING LISTING)
-            listing.setPrice(
-                    crop.getPrice() != null ? crop.getPrice() : 0.0
-            );
+            // 👇 IMPORTANT: Marketplace sees ONLY final price
+            listing.setPrice(finalMarketPrice);
 
-            // Handles create / update safely
+            // Optional (recommended)
+            listing.setFarmerProfit(farmerProfit);
+            listing.setDistributorProfit(distributorProfit);
+
             listingService.createOrActivateListing(listing);
         }
 
         return batchRecordRepository.save(batch);
     }
+
 
 
     private Double parseDoubleSafe(String number) {

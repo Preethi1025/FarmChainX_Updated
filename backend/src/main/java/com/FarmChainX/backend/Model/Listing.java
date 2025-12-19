@@ -36,6 +36,45 @@ public class Listing {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    private Double marketPrice;
+    private Double farmerProfit;
+    private Double distributorProfit;
+    @Column(name = "distributor_id")
+    private String distributorId;
+
+    public Double getMarketPrice() {
+        return marketPrice;
+    }
+
+    public void setMarketPrice(Double marketPrice) {
+        this.marketPrice = marketPrice;
+    }
+
+    public Double getFarmerProfit() {
+        return farmerProfit;
+    }
+
+
+    public String getDistributorId() {
+        return distributorId;
+    }
+
+    public void setDistributorId(String distributorId) {
+        this.distributorId = distributorId;
+    }
+
+    public void setFarmerProfit(Double farmerProfit) {
+        this.farmerProfit = farmerProfit;
+    }
+
+    public Double getDistributorProfit() {
+        return distributorProfit;
+    }
+
+    public void setDistributorProfit(Double distributorProfit) {
+        this.distributorProfit = distributorProfit;
+    }
+
     public Long getListingId() { return listingId; }
     public void setListingId(Long listingId) { this.listingId = listingId; }
 

@@ -75,6 +75,15 @@ public class Crop {
     @Column(columnDefinition = "TEXT")
     private String traceLog;
 
+    private Double farmerPrice;
+
+    public Double getFarmerPrice() {
+        return farmerPrice;
+    }
+
+    public void setFarmerPrice(Double farmerPrice) {
+        this.farmerPrice = farmerPrice;
+    }
     // ---------- getters / setters ----------
 
     public Long getCropId() {
