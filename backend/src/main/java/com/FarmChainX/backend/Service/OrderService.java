@@ -42,7 +42,6 @@ public class OrderService {
             throw new RuntimeException("Insufficient quantity available");
         }
 
-        // Reduce stock
         listing.setQuantity(listing.getQuantity() - requestedQty);
         listingRepository.save(listing);
 
@@ -64,7 +63,6 @@ public class OrderService {
         order.setFarmerProfit(farmerProfit);
         order.setDistributorProfit(distributorProfit);
 
-        // ✅ STORE DELIVERY DETAILS
         order.setDeliveryAddress(deliveryAddress);
         order.setContactNumber(contactNumber);
 
@@ -76,7 +74,6 @@ public class OrderService {
 
         return orderRepository.save(order);
     }
-
 
     // -------------------- UPDATE ORDER STATUS --------------------
     @Transactional
@@ -92,9 +89,24 @@ public class OrderService {
         order.setStatus(status);
         order.setUpdatedAt(LocalDateTime.now());
 
-        // On delivery → profit settlement
-        if (status == OrderStatus.DELIVERED) {
-            settlePayment(order);
+        // 🔥 AUTO SET TIMELINE (IMPORTANT FIX)
+        switch (status) {
+            case IN_WAREHOUSE -> {
+                if (order.getWarehouseAt() == null) {
+                    order.setWarehouseAt(LocalDateTime.now());
+                }
+            }
+            case IN_TRANSIT -> {
+                if (order.getInTransitAt() == null) {
+                    order.setInTransitAt(LocalDateTime.now());
+                }
+            }
+            case DELIVERED -> {
+                if (order.getDeliveredAt() == null) {
+                    order.setDeliveredAt(LocalDateTime.now());
+                }
+                settlePayment(order);
+            }
         }
 
         return orderRepository.save(order);
@@ -117,13 +129,65 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    // -------------------- CANCEL ORDER --------------------
+    @Transactional
+    public Order cancelOrder(Long orderId, String distributorId, String reason) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (!order.getDistributorId().equals(distributorId)) {
+            throw new RuntimeException("Unauthorized distributor");
+        }
+
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            throw new RuntimeException("Delivered orders cannot be cancelled");
+        }
+
+        Listing listing = listingRepository.findById(order.getListingId())
+                .orElseThrow(() -> new RuntimeException("Listing not found"));
+
+        listing.setQuantity(listing.getQuantity() + order.getQuantity());
+        listingRepository.save(listing);
+
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelReason(reason);
+        order.setCancelledAt(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
+
+        return orderRepository.save(order);
+    }
+
+    // -------------------- PAYMENT SPLIT --------------------
     // -------------------- PAYMENT SPLIT --------------------
     private void settlePayment(Order order) {
-        // Placeholder for wallet / payment gateway
+        double farmerProfit = order.getFarmerProfit() != null ? order.getFarmerProfit() : 0.0;
+        double distributorProfit = order.getDistributorProfit() != null ? order.getDistributorProfit() : 0.0;
+
         System.out.println("💰 Payment settled");
-        System.out.println("Farmer profit: " + order.getFarmerProfit());
-        System.out.println("Distributor profit: " + order.getDistributorProfit());
+        System.out.println("Farmer profit: " + farmerProfit);
+        System.out.println("Distributor profit: " + distributorProfit);
+
+        // Fetch listing to get farmerId
+        Listing listing = listingRepository.findById(order.getListingId()).orElse(null);
+        if (listing == null) return;
+
+        // Update farmer balance
+        User farmer = userRepository.findById(listing.getFarmerId()).orElse(null);
+        if (farmer != null) {
+            farmer.setBalance((farmer.getBalance() != null ? farmer.getBalance() : 0.0) + farmerProfit);
+            userRepository.save(farmer);
+        }
+
+        // Update distributor balance
+        User distributor = userRepository.findById(order.getDistributorId()).orElse(null);
+        if (distributor != null) {
+            distributor.setBalance((distributor.getBalance() != null ? distributor.getBalance() : 0.0) + distributorProfit);
+            userRepository.save(distributor);
+        }
     }
+
+
 
     // -------------------- NOTIFICATION --------------------
     private void notifyDistributor(Order order) {
@@ -173,8 +237,18 @@ public class OrderService {
         dto.setPricePerKg(order.getPricePerKg());
         dto.setTotalAmount(order.getTotalAmount());
         dto.setStatus(order.getStatus());
+        dto.setCancelReason(order.getCancelReason());
         dto.setExpectedDelivery(order.getExpectedDelivery());
         dto.setCreatedAt(order.getCreatedAt());
+
+        // 🔥 TRACKING TIMES
+        dto.setWarehouseAt(order.getWarehouseAt());
+        dto.setInTransitAt(order.getInTransitAt());
+        dto.setDeliveredAt(order.getDeliveredAt());
+        dto.setCancelledAt(order.getCancelledAt());
+
+        dto.setDeliveryAddress(order.getDeliveryAddress());
+        dto.setContactNumber(order.getContactNumber());
 
         if (crop != null) {
             dto.setCropName(crop.getCropName());
@@ -193,4 +267,5 @@ public class OrderService {
 
         return dto;
     }
+
 }

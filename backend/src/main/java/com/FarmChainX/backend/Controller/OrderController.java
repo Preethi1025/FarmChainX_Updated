@@ -5,6 +5,7 @@ import com.FarmChainX.backend.Model.OrderDetailsDTO;
 import com.FarmChainX.backend.Service.OrderService;
 import com.FarmChainX.backend.enums.OrderStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -78,4 +79,15 @@ public class OrderController {
     public List<OrderDetailsDTO> getOrdersByDistributorFull(@PathVariable String distributorId) {
         return orderService.getOrdersByDistributorFull(distributorId);
     }
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<Order> cancelOrder(
+            @PathVariable Long orderId,
+            @RequestParam String distributorId,
+            @RequestParam String reason
+    ) {
+        return ResponseEntity.ok(
+                orderService.cancelOrder(orderId, distributorId, reason)
+        );
+    }
+
 }

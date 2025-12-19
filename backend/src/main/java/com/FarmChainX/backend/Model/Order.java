@@ -1,6 +1,7 @@
 package com.FarmChainX.backend.Model;
 
 import com.FarmChainX.backend.enums.OrderStatus;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -22,10 +23,12 @@ public class Order {
     private Double pricePerKg;
     private Double totalAmount;
 
-    private Double farmerProfit;       // ✅ new
-    private Double distributorProfit;   // ✅ new
+//    private Double farmerProfit;       // ✅ new
+//    private Double distributorProfit;   // ✅ new
+    @JsonProperty("expected_delivery")
+    private LocalDateTime expectedDelivery;
 
-    private LocalDateTime expectedDelivery; // ✅ new
+    //private LocalDateTime expectedDelivery; // ✅ new
 
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
@@ -35,6 +38,60 @@ public class Order {
 
     private String deliveryAddress;
     private String contactNumber;
+
+    private String cancelReason;
+    private LocalDateTime cancelledAt;
+
+    private LocalDateTime warehouseAt;
+    private LocalDateTime inTransitAt;
+    private LocalDateTime deliveredAt;
+
+   // @Column(nullable = false)
+    private Double farmerProfit = 0.0;
+
+    //@Column(nullable = false)
+    private Double distributorProfit = 0.0;
+
+
+    public LocalDateTime getWarehouseAt() {
+        return warehouseAt;
+    }
+
+    public void setWarehouseAt(LocalDateTime warehouseAt) {
+        this.warehouseAt = warehouseAt;
+    }
+
+    public LocalDateTime getInTransitAt() {
+        return inTransitAt;
+    }
+
+    public void setInTransitAt(LocalDateTime inTransitAt) {
+        this.inTransitAt = inTransitAt;
+    }
+
+    public LocalDateTime getDeliveredAt() {
+        return deliveredAt;
+    }
+
+    public void setDeliveredAt(LocalDateTime deliveredAt) {
+        this.deliveredAt = deliveredAt;
+    }
+
+    public String getCancelReason() {
+        return cancelReason;
+    }
+
+    public void setCancelReason(String cancelReason) {
+        this.cancelReason = cancelReason;
+    }
+
+    public LocalDateTime getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public void setCancelledAt(LocalDateTime cancelledAt) {
+        this.cancelledAt = cancelledAt;
+    }
 
     public String getDeliveryAddress() {
         return deliveryAddress;

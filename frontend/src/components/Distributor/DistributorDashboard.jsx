@@ -8,72 +8,103 @@ import {
   CheckCircle2,
   ListChecks,
   ShoppingCart,
+  Warehouse,
+  Truck,
+  XCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE = "http://localhost:8080/api";
 
-/* -------------------- UI COMPONENTS -------------------- */
-
-const StatsCard = ({ icon, label, value, bg }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    className={`p-5 rounded-2xl shadow-md bg-gradient-to-br ${bg} flex items-center gap-4`}
-  >
-    <div className="p-3 rounded-xl bg-white shadow">{icon}</div>
+/* -------------------- STATS CARD -------------------- */
+const StatsCard = ({ icon, label, value }) => (
+  <div className="p-4 rounded-xl shadow bg-white flex items-center gap-3">
+    {icon}
     <div>
-      <p className="text-gray-600 text-sm">{label}</p>
-      <p className="text-2xl font-semibold text-gray-800">{value}</p>
+      <p className="text-sm text-gray-500">{label}</p>
+      <p className="text-xl font-semibold">{value}</p>
     </div>
-  </motion.div>
+  </div>
 );
 
-const SectionHeading = ({ title }) => (
-  <h2 className="text-2xl font-semibold text-gray-800 mb-4 border-l-4 border-green-500 pl-3">
-    {title}
-  </h2>
-);
+/* -------------------- ORDER TIMELINE -------------------- */
+const OrderTimeline = ({ order }) => {
+  const steps = [
+    { key: "ORDER_PLACED", label: "Order Placed", icon: <ShoppingCart /> },
+    { key: "IN_WAREHOUSE", label: "In Warehouse", icon: <Warehouse /> },
+    { key: "IN_TRANSIT", label: "In Transit", icon: <Truck /> },
+    { key: "DELIVERED", label: "Delivered", icon: <CheckCircle2 /> }
+  ];
 
-/* -------------------- MAIN COMPONENT -------------------- */
+  return (
+    <div className="mt-4 space-y-3">
+      {steps.map((step) => {
+        const active =
+          steps.findIndex(s => s.key === order.status) >=
+          steps.findIndex(s => s.key === step.key);
 
+        return (
+          <div
+            key={step.key}
+            className={`flex items-center gap-3 p-2 rounded-lg ${
+              active ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-400"
+            }`}
+          >
+            {step.icon}
+            <span className="font-medium">{step.label}</span>
+          </div>
+        );
+      })}
+
+      {order.status === "CANCELLED" && (
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-red-50 text-red-700">
+          <XCircle />
+          <span className="font-medium">
+            Cancelled — {order.cancelReason || "No reason"}
+          </span>
+        </div>
+      )}
+
+      <p className="text-sm text-gray-600 mt-2">
+        <b>Expected Delivery:</b>{" "}
+        {order.expectedDelivery
+          ? new Date(order.expectedDelivery).toLocaleString()
+          : "Not set"}
+      </p>
+    </div>
+  );
+};
+
+/* -------------------- MAIN -------------------- */
 const DistributorDashboard = () => {
   const { user } = useAuth();
   const distributorId = user?.id;
   const navigate = useNavigate();
 
+  const [activeTab, setActiveTab] = useState("BATCHES");
   const [pending, setPending] = useState([]);
   const [approved, setApproved] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
 
+  /* -------------------- LOAD DATA -------------------- */
   useEffect(() => {
     if (!distributorId) return;
     fetchBatches();
     fetchOrders();
   }, [distributorId]);
 
-  /* -------------------- FETCH BATCHES -------------------- */
-
   const fetchBatches = async () => {
-    setLoading(true);
     try {
-      const [pendingRes, approvedRes] = await Promise.all([
+      const [p, a] = await Promise.all([
         axios.get(`${API_BASE}/batches/pending`),
-        axios.get(`${API_BASE}/batches/approved/${distributorId}`),
+        axios.get(`${API_BASE}/batches/approved/${distributorId}`)
       ]);
-
-      setPending(pendingRes.data || []);
-      setApproved(approvedRes.data || []);
+      setPending(p.data || []);
+      setApproved(a.data || []);
     } catch (err) {
-      console.error(err);
-      alert("Failed to load batches");
-    } finally {
-      setLoading(false);
+      console.error("Batch fetch error", err);
     }
   };
-
-  /* -------------------- FETCH ORDERS -------------------- */
 
   const fetchOrders = async () => {
     try {
@@ -82,224 +113,184 @@ const DistributorDashboard = () => {
       );
       setOrders(res.data || []);
     } catch (err) {
-      console.error("Failed to fetch orders:", err);
+      console.error("Order fetch error", err);
     }
   };
 
-  /* -------------------- ORDER ACTIONS (FIXED) -------------------- */
-
+  /* -------------------- ORDER ACTIONS -------------------- */
   const updateOrderStatus = async (orderId, status) => {
-    try {
-      await axios.put(
-        `${API_BASE}/orders/${orderId}/status`,
-        null,
-        {
-          params: {
-            status,
-            distributorId,
-          },
-        }
-      );
-      fetchOrders();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to update order status");
-    }
+    await axios.put(
+      `${API_BASE}/orders/${orderId}/status`,
+      null,
+      { params: { status, distributorId } }
+    );
+    fetchOrders();
   };
 
-  const setExpectedDelivery = async (orderId) => {
-    const dateStr = prompt("Enter expected delivery (YYYY-MM-DDTHH:mm)");
-    if (!dateStr) return;
-
-    try {
-      await axios.put(
-        `${API_BASE}/orders/${orderId}/expected-delivery`,
-        null,
-        {
-          params: {
-            expectedDelivery: dateStr,
-            distributorId,
-          },
-        }
-      );
-      fetchOrders();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to set delivery date");
-    }
+  const setExpectedDelivery = async (orderId, date) => {
+    if (!date) return;
+    await axios.put(
+      `${API_BASE}/orders/${orderId}/expected-delivery`,
+      null,
+      { params: { expectedDelivery: date, distributorId } }
+    );
+    fetchOrders();
   };
 
-  /* -------------------- BATCH ACTIONS -------------------- */
+  const cancelOrder = async (orderId) => {
+    const reason = prompt("Reason for cancellation?");
+    if (!reason) return;
 
-  const handleApprove = async (batchId) => {
-    try {
-      await axios.put(
-        `${API_BASE}/batches/distributor/approve/${batchId}/${distributorId}`
-      );
-      fetchBatches();
-    } catch {
-      alert("Approve failed");
-    }
+    await axios.put(
+      `${API_BASE}/orders/${orderId}/cancel`,
+      null,
+      { params: { distributorId, reason } }
+    );
+    fetchOrders();
   };
 
-  const handleReject = async (batchId) => {
-    try {
-      const reason = prompt("Enter rejection reason:", "Quality issues");
-      await axios.put(
-        `${API_BASE}/batches/distributor/reject/${batchId}/${distributorId}`,
-        { reason }
-      );
-      fetchBatches();
-    } catch {
-      alert("Reject failed");
-    }
-  };
+  /* -------------------- FILTERS -------------------- */
+  const liveOrders = orders.filter(
+    o => o.status !== "DELIVERED" && o.status !== "CANCELLED"
+  );
 
-  const handleTrace = (batchId) => {
-    navigate(`/trace/${batchId}`);
-  };
-
-  /* -------------------- RENDER -------------------- */
+  const historyOrders = orders.filter(
+    o => o.status === "DELIVERED" || o.status === "CANCELLED"
+  );
 
   if (!distributorId) {
-    return <p className="text-center mt-10">Please login as distributor.</p>;
-  }
-
-  if (loading) {
-    return <p className="text-center mt-10">Loading...</p>;
+    return <p className="mt-10 text-center">Login as distributor</p>;
   }
 
   return (
-    <div className="p-6 w-full">
-
+    <div className="p-6">
       {/* HEADER */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-10 rounded-2xl p-6 shadow-lg bg-gradient-to-r from-green-100 to-green-50"
-      >
-        <h1 className="text-3xl font-semibold text-gray-800">
-          Distributor Dashboard
-        </h1>
-        <p className="text-gray-600 mt-1">
-          Manage batches and customer orders
-        </p>
-      </motion.div>
+      <div className="mb-6">
+        <h1 className="text-3xl font-semibold">Distributor Dashboard</h1>
+        <p className="text-gray-600">Supply chain & order handling</p>
+      </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <StatsCard
-          icon={<Clock size={28} />}
-          label="Pending Batches"
-          value={pending.length}
-          bg="from-yellow-50 to-yellow-100"
-        />
-        <StatsCard
-          icon={<CheckCircle2 size={28} />}
-          label="Approved Batches"
-          value={approved.length}
-          bg="from-green-50 to-green-100"
-        />
-        <StatsCard
-          icon={<ListChecks size={28} />}
-          label="Total Orders"
-          value={orders.length}
-          bg="from-blue-50 to-blue-100"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <StatsCard icon={<ShoppingCart />} label="Live Orders" value={liveOrders.length} />
+        <StatsCard icon={<CheckCircle2 />} label="Approved Batches" value={approved.length} />
+        <StatsCard icon={<Clock />} label="Pending Batches" value={pending.length} />
+        <StatsCard icon={<ListChecks />} label="Order History" value={historyOrders.length} />
       </div>
 
-      {/* ORDERS SECTION */}
-      <SectionHeading title="Active Orders" />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[450px] overflow-y-auto pr-2 mb-12">
-        {orders.length === 0 ? (
-          <p className="text-gray-600">No orders available.</p>
-        ) : (
-          orders.map((order) => (
-            <motion.div
-              key={order.orderId}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-2xl shadow bg-white border"
-            >
-              <div className="flex justify-between mb-2">
-                <h3 className="font-semibold text-lg">
-                  {order.orderCode}
-                </h3>
-                <span className="text-sm text-gray-500">
-                  {order.status}
-                </span>
-              </div>
-
-              <p><b>Crop:</b> {order.cropName} ({order.cropType})</p>
-              <p><b>Quantity:</b> {order.quantity} kg</p>
-              <p><b>Total:</b> ₹{order.totalAmount}</p>
-              <p>
-                <b>Expected Delivery:</b>{" "}
-                {order.expectedDelivery || "Not set"}
-              </p>
-
-              <div className="flex gap-2 mt-4 flex-wrap">
-                <button
-                  onClick={() =>
-                    updateOrderStatus(order.orderId, "IN_TRANSIT")
-                  }
-                  className="px-3 py-1 bg-blue-500 text-white rounded"
-                >
-                  In Transit
-                </button>
-                <button
-                  onClick={() =>
-                    updateOrderStatus(order.orderId, "DELIVERED")
-                  }
-                  className="px-3 py-1 bg-green-500 text-white rounded"
-                >
-                  Delivered
-                </button>
-                <button
-                  onClick={() => setExpectedDelivery(order.orderId)}
-                  className="px-3 py-1 bg-yellow-400 text-white rounded"
-                >
-                  Set Delivery
-                </button>
-              </div>
-            </motion.div>
-          ))
-        )}
+      {/* TABS */}
+      <div className="flex gap-4 mb-6">
+        {["BATCHES", "ORDERS"].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-5 py-2 rounded-lg font-medium ${
+              activeTab === tab ? "bg-green-600 text-white" : "bg-gray-100"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
-      {/* BATCH SECTIONS */}
-      <SectionHeading title="Pending Batches" />
-      {pending.length === 0 ? (
-        <p className="text-gray-600">No pending batches.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {pending.map((batch) => (
-            <BatchCard
-              key={batch.batchId}
-              batch={batch}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onTrace={handleTrace}
-            />
-          ))}
-        </div>
+      {/* -------------------- BATCHES -------------------- */}
+      {activeTab === "BATCHES" && (
+        <>
+          <h2 className="text-xl font-semibold mb-4">Pending Batches</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {pending.length === 0 ? (
+              <p className="text-gray-500">No pending batches</p>
+            ) : (
+              pending.map(batch => (
+                <BatchCard
+                  key={batch.batchId}
+                  batch={batch}
+                  onApprove={() =>
+                    axios.put(
+                      `${API_BASE}/batches/distributor/approve/${batch.batchId}/${distributorId}`
+                    ).then(fetchBatches)
+                  }
+                  onReject={() => {
+                    const reason = prompt("Reason?");
+                    axios.put(
+                      `${API_BASE}/batches/distributor/reject/${batch.batchId}/${distributorId}`,
+                      { reason }
+                    ).then(fetchBatches);
+                  }}
+                  onTrace={() => navigate(`/trace/${batch.batchId}`)}
+                />
+              ))
+            )}
+          </div>
+
+          <h2 className="text-xl font-semibold mt-10 mb-4">Approved Batches</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {approved.length === 0 ? (
+              <p className="text-gray-500">No approved batches</p>
+            ) : (
+              approved.map(batch => (
+                <BatchCard
+                  key={batch.batchId}
+                  batch={batch}
+                  readOnly
+                  onTrace={() => navigate(`/trace/${batch.batchId}`)}
+                />
+              ))
+            )}
+          </div>
+        </>
       )}
 
-      <SectionHeading title="Approved Batches" />
-      {approved.length === 0 ? (
-        <p className="text-gray-600">No approved batches.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {approved.map((batch) => (
-            <BatchCard
-              key={batch.batchId}
-              batch={batch}
-              readOnly
-              onTrace={handleTrace}
-            />
-          ))}
-        </div>
+      {/* -------------------- ORDERS -------------------- */}
+      {activeTab === "ORDERS" && (
+        <>
+          <h2 className="text-xl font-semibold mb-4">Live Orders</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {liveOrders.length === 0 ? (
+              <p className="text-gray-500">No active orders</p>
+            ) : (
+              liveOrders.map(order => (
+                <motion.div
+                  key={order.orderId}
+                  className="p-5 bg-white rounded-2xl shadow border"
+                >
+                  <h3 className="font-semibold text-lg mb-2">{order.orderCode}</h3>
+                  <p><b>Crop:</b> {order.cropName}</p>
+                  <p><b>Quantity:</b> {order.quantity} kg</p>
+                  <p><b>Total:</b> ₹{order.totalAmount}</p>
+
+                  <OrderTimeline order={order} />
+
+                  <div className="flex gap-2 mt-4 flex-wrap">
+                    <button onClick={() => updateOrderStatus(order.orderId, "IN_WAREHOUSE")}
+                      className="px-3 py-1 bg-green-600 text-white rounded">
+                      In Warehouse
+                    </button>
+                    <button onClick={() => updateOrderStatus(order.orderId, "IN_TRANSIT")}
+                      className="px-3 py-1 bg-blue-600 text-white rounded">
+                      In Transit
+                    </button>
+                    <button onClick={() => updateOrderStatus(order.orderId, "DELIVERED")}
+                      className="px-3 py-1 bg-green-700 text-white rounded">
+                      Delivered
+                    </button>
+                    <button onClick={() => cancelOrder(order.orderId)}
+                      className="px-3 py-1 bg-red-600 text-white rounded">
+                      Cancel
+                    </button>
+                    <input
+                      type="datetime-local"
+                      className="border rounded px-2 py-1"
+                      onChange={(e) =>
+                        setExpectedDelivery(order.orderId, e.target.value)
+                      }
+                    />
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );

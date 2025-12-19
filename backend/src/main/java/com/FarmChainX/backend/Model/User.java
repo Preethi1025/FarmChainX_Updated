@@ -1,5 +1,6 @@
 package com.FarmChainX.backend.Model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -17,6 +18,20 @@ public class User {
     private String role;
     private String phone;
     private Boolean blocked = false;
+
+    @Column(nullable = false)
+    private Double balance = 0.0; // initialize with 0
+
+    // Getter
+    public Double getBalance() {
+        return balance;
+    }
+
+    // Setter
+    public void setBalance(Double balance) {
+        this.balance = balance;
+    }
+
 
     public String getId() {
         return id;

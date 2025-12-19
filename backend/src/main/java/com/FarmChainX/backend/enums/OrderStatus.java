@@ -5,5 +5,6 @@ public enum OrderStatus {
     IN_WAREHOUSE,
     IN_TRANSIT,
     OUT_FOR_DELIVERY,
-    DELIVERED
+    DELIVERED,
+    CANCELLED
 }
