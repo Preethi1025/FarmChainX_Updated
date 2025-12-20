@@ -24,9 +24,9 @@ public class BatchService {
     private final BatchTraceRepository batchTraceRepository;
 
     public BatchService(BatchRecordRepository batchRecordRepository,
-                        CropRepository cropRepository,
-                        ListingService listingService,
-                        BatchTraceRepository batchTraceRepository) {
+            CropRepository cropRepository,
+            ListingService listingService,
+            BatchTraceRepository batchTraceRepository) {
         this.batchRecordRepository = batchRecordRepository;
         this.cropRepository = cropRepository;
         this.listingService = listingService;
@@ -44,7 +44,8 @@ public class BatchService {
             batch.setBatchId(generateBatchId(batch.getCropType()));
 
         batch.setCreatedAt(LocalDateTime.now());
-        if (batch.getStatus() == null) batch.setStatus("PLANTED");
+        if (batch.getStatus() == null)
+            batch.setStatus("PLANTED");
 
         if ("HARVESTED".equalsIgnoreCase(batch.getStatus()) && batch.getHarvestDate() == null)
             batch.setHarvestDate(LocalDate.now());
@@ -68,22 +69,55 @@ public class BatchService {
     }
 
     // ------------------- DISTRIBUTOR PENDING BATCHES -------------------
-    public List<Map<String, Object>> getPendingBatchesForDistributor() {
-        List<BatchRecord> pending = batchRecordRepository.findByStatusIn(
-                Arrays.asList("HARVESTED", "SUBMITTED_FOR_APPROVAL")
-        );
+    public List<BatchRecord> getPendingBatchesForDistributor() {
 
-        List<Map<String, Object>> response = new ArrayList<>();
-        for (BatchRecord b : pending) response.add(toBatchResponse(b));
-        return response;
+        List<BatchRecord> batches = batchRecordRepository.findByStatusIn(
+                List.of("HARVESTED", "SUBMITTED_FOR_APPROVAL"));
+
+        return batches.stream()
+                .filter(b -> !Boolean.TRUE.equals(b.getBlocked()))
+                .filter(b -> {
+                    List<Crop> activeCrops = cropRepository.findByBatchId(b.getBatchId())
+                            .stream()
+                            .filter(c -> !Boolean.TRUE.equals(c.getBlocked()))
+                            .toList();
+                    return !activeCrops.isEmpty();
+                })
+                .toList();
     }
 
-
     // ------------------- DISTRIBUTOR APPROVED BATCHES -------------------
-    public List<Map<String, Object>> getApprovedBatches(String distributorId) {
-        List<BatchRecord> approved = batchRecordRepository.findByDistributorIdAndStatus(distributorId, "APPROVED");
+    public List<BatchRecord> getApprovedBatches(String distributorId) {
+
+        List<BatchRecord> batches = batchRecordRepository.findByDistributorIdAndStatus(
+                distributorId, "APPROVED");
+
+        return batches.stream()
+                // ❌ remove blocked batches
+                .filter(b -> !Boolean.TRUE.equals(b.getBlocked()))
+
+                // ❌ remove batches with no active crops
+                .filter(b -> {
+                    List<Crop> activeCrops = cropRepository.findByBatchId(b.getBatchId())
+                            .stream()
+                            .filter(c -> !Boolean.TRUE.equals(c.getBlocked()))
+                            .toList();
+                    return !activeCrops.isEmpty();
+                })
+                .toList();
+    }
+
+    // ------------------- LEGACY / OLD UI SUPPORT -------------------
+    public List<Map<String, Object>> getApprovedBatchesAsMap(String distributorId) {
+
+        List<BatchRecord> approved = batchRecordRepository.findByDistributorIdAndStatus(
+                distributorId, "APPROVED");
+
         List<Map<String, Object>> response = new ArrayList<>();
-        for (BatchRecord b : approved) response.add(toBatchResponse(b));
+        for (BatchRecord b : approved) {
+            response.add(toBatchResponse(b));
+        }
+
         return response;
     }
 
@@ -116,13 +150,11 @@ public class BatchService {
 
             // Quantity from crop
             listing.setQuantity(
-                    crop.getQuantity() != null ? Double.parseDouble(crop.getQuantity()) : 0.0
-            );
+                    crop.getQuantity() != null ? Double.parseDouble(crop.getQuantity()) : 0.0);
 
             // ✅ PRICE MUST COME FROM CROP (OR EXISTING LISTING)
             listing.setPrice(
-                    crop.getPrice() != null ? crop.getPrice() : 0.0
-            );
+                    crop.getPrice() != null ? crop.getPrice() : 0.0);
 
             // Handles create / update safely
             listingService.createOrActivateListing(listing);
@@ -130,7 +162,6 @@ public class BatchService {
 
         return batchRecordRepository.save(batch);
     }
-
 
     private Double parseDoubleSafe(String number) {
         try {
@@ -150,7 +181,7 @@ public class BatchService {
 
         batch.setStatus("REJECTED");
         batch.setRejectedBy(distributorId);
-        batch.setRejectionReason(reason);   // ✅ STORE REASON
+        batch.setRejectionReason(reason); // ✅ STORE REASON
         batch.setBlocked(true);
         batch.setUpdatedAt(LocalDateTime.now());
 
@@ -160,12 +191,10 @@ public class BatchService {
         saveTrace(
                 batch,
                 "REJECTED - Reason: " + (reason != null ? reason : "N/A"),
-                distributorId
-        );
+                distributorId);
 
         return batch;
     }
-
 
     // ------------------- UPDATE STATUS -------------------
     @Transactional
@@ -199,8 +228,10 @@ public class BatchService {
             if (grade != null) {
                 // try to set average quality/confidence on batch if fields exist
                 try {
-                    batch.setAvgQualityScore(confidence != null ? confidence.doubleValue() : batch.getAvgQualityScore());
-                } catch (Throwable ignored) {}
+                    batch.setAvgQualityScore(
+                            confidence != null ? confidence.doubleValue() : batch.getAvgQualityScore());
+                } catch (Throwable ignored) {
+                }
             }
             batch.setUpdatedAt(LocalDateTime.now());
             batchRecordRepository.save(batch);
@@ -213,11 +244,13 @@ public class BatchService {
         }
         cropRepository.saveAll(crops);
 
-        // store confidence/avgQualityScore on batch record as well so frontend can read it easily
+        // store confidence/avgQualityScore on batch record as well so frontend can read
+        // it easily
         if (confidence != null) {
             try {
                 batch.setAvgQualityScore(confidence.doubleValue());
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+            }
         }
         batch.setUpdatedAt(LocalDateTime.now());
         batchRecordRepository.save(batch);
@@ -301,7 +334,6 @@ public class BatchService {
         return child;
     }
 
-
     // ------------------- MERGE BATCHES -------------------
     @Transactional
     public List<BatchRecord> mergeBatches(String targetBatchId, List<String> sourceBatchIds, String userId) {
@@ -364,7 +396,6 @@ public class BatchService {
 
     }
 
-
     // ------------------- GET BATCH TRACES -------------------
     public List<BatchTrace> getBatchTrace(String batchId) {
         return batchTraceRepository.findByBatchIdOrderByTimestampAsc(batchId);
@@ -372,8 +403,13 @@ public class BatchService {
 
     // ------------------- HELPERS -------------------
     private double parseQuantity(String q) {
-        if (q == null || q.isEmpty()) return 0.0;
-        try { return Double.parseDouble(q); } catch (NumberFormatException e) { return 0.0; }
+        if (q == null || q.isEmpty())
+            return 0.0;
+        try {
+            return Double.parseDouble(q);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 
     private double roundToTwoDecimals(double v) {
@@ -419,7 +455,6 @@ public class BatchService {
         return data;
     }
 
-
     private String generateBatchId(String cropType) {
         String prefix = cropType != null && cropType.length() >= 3
                 ? cropType.substring(0, 3).toUpperCase()
@@ -438,6 +473,7 @@ public class BatchService {
         trace.setTimestamp(LocalDateTime.now());
         batchTraceRepository.save(trace);
     }
+
     public BatchRecord submitForApproval(String batchId, String userId) {
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));

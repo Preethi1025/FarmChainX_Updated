@@ -18,11 +18,15 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
     quantity: ''    // Required by database
   });
 
+
+  const [cropImage, setCropImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [qrValue, setQrValue] = useState('');
   const [generatedBatchId, setGeneratedBatchId] = useState('');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState(null);
+
 
   // Crop type options
   const cropTypes = [
@@ -147,10 +151,24 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
         // Note: status is NOT sent - backend sets default "PLANTED"
       };
 
-      console.log('Sending crop data:', cropData);
 
-      // Try main endpoint
-      const response = await axios.post('http://localhost:8080/api/crops/add', cropData);
+      console.log('Sending crop data:', cropData);
+      const payload = new FormData();
+      payload.append(
+        "crop",
+        new Blob([JSON.stringify(cropData)], { type: "application/json" })
+      );
+
+      if (cropImage) {
+        payload.append("image", cropImage);
+      }
+
+      const response = await axios.post(
+        "http://localhost:8080/api/crops/add-with-image",
+        payload,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
 
       const savedCrop = response.data;
       console.log('Saved crop response:', savedCrop);
@@ -236,6 +254,9 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
     setGeneratedBatchId('');
     setSuccess(false);
     setError('');
+    setPreviewUrl(null);
+    setCropImage(null);
+
   };
 
   const handleClose = () => {
@@ -446,6 +467,45 @@ const AddCropModal = ({ onClose, farmerId, onCropAdded }) => {
                   required
                 />
               </div>
+              {/* ✅ IMAGE UPLOAD (ONLY ADDITION) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Crop Image
+                </label>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    // basic validation
+                    if (file.size > 5 * 1024 * 1024) {
+                      alert("Image must be under 5MB");
+                      return;
+                    }
+
+                    setCropImage(file);
+                    setPreviewUrl(URL.createObjectURL(file));
+                  }}
+                  className="block w-full text-sm"
+                />
+
+                {/* IMAGE PREVIEW */}
+                {previewUrl && (
+                  <div className="mt-3 w-full max-w-xs">
+                    <div className="aspect-[16/9] rounded-xl overflow-hidden border shadow-sm">
+                      <img
+                        src={previewUrl}
+                        alt="Crop preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
 
               {/* Estimated Yield */}
               <div>

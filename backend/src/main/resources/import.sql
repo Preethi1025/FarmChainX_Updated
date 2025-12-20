@@ -76,3 +76,8 @@ CREATE TABLE listings (
     INDEX idx_listing_crop (crop_id),
     INDEX idx_listing_batch (batch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE crops
+ADD COLUMN crop_image_url VARCHAR(1024),
+ADD COLUMN quality_check_status VARCHAR(50) DEFAULT 'PENDING';
+ALTER TABLE listings
+ADD COLUMN crop_image_url VARCHAR(1024);

@@ -43,6 +43,8 @@ public class ListingController {
                 item.put("location", crop.getLocation());
                 item.put("qualityGrade", crop.getQualityGrade());
                 item.put("cropType", crop.getCropType());
+                item.put("cropImageUrl", crop.getCropImageUrl());
+
 
                 // ✅ Price & quantity: listing overrides crop if available
                 item.put("price", listing.getPrice() != null ? listing.getPrice() :

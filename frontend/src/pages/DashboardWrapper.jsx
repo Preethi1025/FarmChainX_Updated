@@ -2,10 +2,9 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 
 import DistributorDashboard from '../components/Distributor/DistributorDashboard';
-import FarmerDashboard from '../components/farmer/FarmerDashboard';
 import Dashboard from './Dashboard';
 
-// import ConsumerDashboard from '../components/consumer/ConsumerDashboard'; // Uncomment when ready
+ //import ConsumerDashboard from '../components/consumer/ConsumerDashboard'; 
 
 const DashboardWrapper = () => {
   const role = localStorage.getItem("userRole"); // persist role after login

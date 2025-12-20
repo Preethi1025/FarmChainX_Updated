@@ -2,6 +2,7 @@ package com.FarmChainX.backend.Service;
 
 import com.FarmChainX.backend.Model.Crop;
 import com.FarmChainX.backend.Model.Listing;
+import com.FarmChainX.backend.Repository.CropRepository;
 import com.FarmChainX.backend.Repository.ListingRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -13,10 +14,15 @@ import java.util.List;
 public class ListingService {
 
     private final ListingRepository listingRepository;
+    private final CropRepository cropRepository; 
 
-    public ListingService(ListingRepository listingRepository) {
+    public ListingService(ListingRepository listingRepository,
+                          CropRepository cropRepository) {
         this.listingRepository = listingRepository;
+        this.cropRepository = cropRepository;
     }
+
+    // -------------------------------------------------
 
     @Transactional
     public Listing createOrActivateListing(Listing incoming) {
@@ -25,15 +31,24 @@ public class ListingService {
                 .findByBatchIdAndCropId(incoming.getBatchId(), incoming.getCropId());
 
         if (existing != null) {
-            // Update existing listing
             existing.setQuantity(incoming.getQuantity());
             existing.setPrice(incoming.getPrice());
             existing.setStatus("ACTIVE");
             existing.setUpdatedAt(LocalDateTime.now());
+
+            if (existing.getCropImageUrl() == null && incoming.getCropId() != null) {
+                cropRepository.findById(incoming.getCropId())
+                        .ifPresent(crop -> existing.setCropImageUrl(crop.getCropImageUrl()));
+            }
+
             return listingRepository.save(existing);
         }
 
-        // Create new listing
+        if (incoming.getCropId() != null) {
+            cropRepository.findById(incoming.getCropId())
+                    .ifPresent(crop -> incoming.setCropImageUrl(crop.getCropImageUrl()));
+        }
+
         incoming.setStatus("ACTIVE");
         incoming.setCreatedAt(LocalDateTime.now());
         incoming.setUpdatedAt(LocalDateTime.now());
@@ -41,11 +56,11 @@ public class ListingService {
         return listingRepository.save(incoming);
     }
 
+    // -------------------------------------------------
+
     public List<Listing> getActiveListings() {
         return listingRepository.findByStatus("ACTIVE");
     }
-
-
 
     public List<Listing> getAllListings() {
         return listingRepository.findAll();
@@ -55,7 +70,7 @@ public class ListingService {
         return listingRepository.findById(id).orElse(null);
     }
 
-    // ✅ FIX: return first listing for batch
+    // ✅ return first listing for batch
     public Listing getListingByBatchId(String batchId) {
         List<Listing> listings = listingRepository.findByBatchId(batchId);
         return listings.isEmpty() ? null : listings.get(0);
@@ -80,6 +95,9 @@ public class ListingService {
     public boolean existsByCropId(Long cropId) {
         return listingRepository.existsByCropId(cropId);
     }
+
+    // -------------------------------------------------
+
     public Listing activateListingFromCrop(Listing incoming, Crop crop) {
 
         Listing listing = listingRepository
@@ -94,7 +112,8 @@ public class ListingService {
             listing.setCreatedAt(LocalDateTime.now());
         }
 
-        // ✅ ALWAYS COPY PRICE FROM DB SOURCE
+        // ✅ always sync image
+        listing.setCropImageUrl(crop.getCropImageUrl());
         listing.setPrice(crop.getPrice());
         listing.setQuantity(incoming.getQuantity());
         listing.setStatus("ACTIVE");
@@ -102,5 +121,4 @@ public class ListingService {
 
         return listingRepository.save(listing);
     }
-
 }

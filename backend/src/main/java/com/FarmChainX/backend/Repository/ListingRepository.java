@@ -21,6 +21,6 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     Optional<Listing> findFirstByBatchId(String batchId);
 
     Listing findByBatchIdAndCropId(String batchId, Long cropId);
-    // ✅ ADD THIS
+ 
     List<Listing> findByStatus(String status);
 }

@@ -54,9 +54,17 @@ const DistributorDashboard = () => {
           })
         );
       };
+      const filteredPending = (pendingRes.data || []).filter(
+        b => b.status !== "DELETED" && b.status !== "EMPTY" && !b.blocked
+      );
 
-      setPending(await enrichWithPrice(pendingRes.data || []));
-      setApproved(await enrichWithPrice(approvedRes.data || []));
+      const filteredApproved = (approvedRes.data || []).filter(
+        b => b.status !== "DELETED" && b.status !== "EMPTY" && !b.blocked
+      );
+
+      setPending(await enrichWithPrice(filteredPending));
+      setApproved(await enrichWithPrice(filteredApproved));
+
     } catch (e) {
       console.error("Failed to load batches:", e);
       alert("Failed to load batches");
@@ -144,7 +152,7 @@ const DistributorDashboard = () => {
       {pending.length === 0 ? (
         <p className="text-gray-600">No pending batches.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {pending.map((batch) => (
             <BatchCard
               key={batch.batchId}
@@ -162,7 +170,7 @@ const DistributorDashboard = () => {
       {approved.length === 0 ? (
         <p className="text-gray-600">No approved batches yet.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {approved.map((batch) => (
             <BatchCard
               key={batch.batchId}

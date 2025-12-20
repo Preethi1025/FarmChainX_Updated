@@ -1,14 +1,11 @@
 import React from "react";
 import {
   Leaf,
-  Calendar,
-  User,
   MapPin,
-  Star,
-  Weight,
   IndianRupee,
-  PackageCheck,
   BadgeCheck,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 
 const BatchCard = ({
@@ -16,111 +13,96 @@ const BatchCard = ({
   onApprove,
   onReject,
   onTrace,
-  readOnly = false,
+  readOnly = false
 }) => {
-
-  // ✅ SAFE DEBUG (optional)
-  // console.log("Batch price:", batch.price);
-
+  if (!batch || batch.status === "DELETED" || batch.status === "EMPTY") {
+    return null;
+  }
   return (
-    <div className="p-5 rounded-2xl shadow-lg bg-white border border-gray-200 hover:shadow-xl transition-all duration-200">
-      
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-          <Leaf size={18} /> {batch.cropType || "Unknown Crop"}
-        </h3>
+    <div className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition overflow-hidden w-full max-w-[300px]">
 
-        <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+      {/* IMAGE */}
+      <div className="relative aspect-[16/10] overflow-hidden">
+        <img
+          src={`http://localhost:8080${batch.cropImageUrl}`}
+          alt={batch.cropType || "Crop"}
+          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          onError={(e) => {
+            e.currentTarget.src = "/placeholder.png";
+          }}
+        />
+
+        {/* STATUS */}
+        <span className="absolute top-3 right-3 bg-emerald-500 text-white text-[11px] px-3 py-1 rounded-full shadow">
           {batch.status}
         </span>
+
+        {/* TITLE */}
+        <div className="absolute bottom-3 left-3 text-white">
+          <p className="flex items-center gap-1 text-sm font-semibold">
+            <Leaf size={14} />
+            {batch.cropType || "OTHER"}
+          </p>
+          <p className="text-xs opacity-90">
+            {batch.totalQuantity || 0} kg available
+          </p>
+        </div>
       </div>
 
-      {/* BASIC INFO */}
-      <div className="space-y-2 text-sm text-gray-700">
+      {/* CONTENT */}
+      <div className="p-3 space-y-2">
 
-        <p className="flex items-center gap-2">
-          <Weight size={16} className="text-green-600" />
-          <strong>{batch.totalQuantity || 0} kg</strong>
-        </p>
-
-        {/* ✅ PRICE FIX */}
-        <p className="flex items-center gap-2">
-          <IndianRupee size={16} className="text-green-700" />
-          <strong>
-            {batch.price && batch.price > 0
-              ? `₹${batch.price} / kg`
-              : "Price not set"}
-          </strong>
-        </p>
-
-        {/* Optional: listing quantity */}
-        {batch.listingQuantity != null && (
-          <p className="flex items-center gap-2">
-            <PackageCheck size={16} className="text-teal-600" />
-            Listing Qty: <strong>{batch.listingQuantity} kg</strong>
+        {/* PRICE + LOCATION */}
+        <div className="flex justify-between items-center">
+          <p className="flex items-center gap-1 text-green-700 font-semibold">
+            <IndianRupee size={16} />
+            {batch.price ?? "—"}
+            <span className="text-xs text-gray-500">/kg</span>
           </p>
-        )}
 
-        <p className="flex items-center gap-2">
-          <User size={16} className="text-blue-600" />
-          Farmer:{" "}
-          <strong>{batch.farmerName || batch.farmerId || "N/A"}</strong>
-        </p>
-
-        <p className="flex items-center gap-2">
-          <Calendar size={16} className="text-red-500" />
-          Harvest Date: <strong>{batch.harvestDate || "N/A"}</strong>
-        </p>
-
-        <p className="flex items-center gap-2">
-          <MapPin size={16} className="text-purple-600" />
-          Location: <strong>{batch.location || "N/A"}</strong>
-        </p>
-
-        <p className="flex items-center gap-2">
-          <Star size={16} className="text-yellow-500" />
-          Quality Score:{" "}
-          <strong>
-            {batch.avgQualityScore != null
-              ? `${Number(batch.avgQualityScore).toFixed(1)}%`
-              : "Not Available"}
-          </strong>
-        </p>
-
-        {batch.certification && (
-          <p className="flex items-center gap-2">
-            <BadgeCheck size={16} className="text-indigo-600" />
-            Certification: <strong>{batch.certification}</strong>
+          <p className="flex items-center gap-1 text-xs text-gray-500">
+            <MapPin size={12} />
+            {batch.location || "—"}
           </p>
-        )}
-      </div>
+        </div>
 
-      {/* ACTION BUTTONS */}
-      <div className="mt-4 flex gap-3 flex-wrap">
-        {!readOnly && (
-          <>
-            <button
-              className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition"
-              onClick={() => onApprove(batch.batchId)}
-            >
-              Approve
-            </button>
+        {/* QUALITY */}
+        <div className="flex items-center gap-2 text-xs bg-green-50 text-green-700 px-3 py-1.5 rounded-full w-fit">
+          <BadgeCheck size={14} />
+          Passed Quality Check
+        </div>
 
-            <button
-              className="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition"
-              onClick={() => onReject(batch.batchId)}
-            >
-              Reject
-            </button>
-          </>
-        )}
+        {/* ACTIONS */}
+        <div className="flex gap-2 pt-2">
 
+          {/* APPROVE / REJECT → ONLY FOR PENDING */}
+          {!readOnly && onApprove && onReject && (
+            <>
+              <button
+                onClick={() => onApprove(batch.batchId)}
+                className="flex-1 flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl text-sm font-medium transition"
+              >
+                <CheckCircle size={16} />
+                Approve
+              </button>
+
+              <button
+                onClick={() => onReject(batch.batchId)}
+                className="flex-1 flex items-center justify-center gap-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl text-sm font-medium transition"
+              >
+                <XCircle size={16} />
+                Reject
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* TRACE */}
         <button
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
           onClick={() => onTrace(batch.batchId)}
+          className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-sm font-medium transition"
         >
-          Trace
+          Trace Batch
         </button>
       </div>
     </div>

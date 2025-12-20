@@ -5,21 +5,37 @@ import com.FarmChainX.backend.Model.Crop;
 import com.FarmChainX.backend.Repository.BatchRecordRepository;
 import com.FarmChainX.backend.Repository.CropRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import com.FarmChainX.backend.Model.Listing;
+import com.FarmChainX.backend.Repository.ListingRepository;
+
+import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+
+import java.nio.file.Path;
 
 @Service
 public class CropService {
 
     private final CropRepository cropRepository;
     private final BatchRecordRepository batchRecordRepository;
+    private final ListingRepository listingRepository;
 
-    public CropService(CropRepository cropRepository, BatchRecordRepository batchRecordRepository) {
+    public CropService(
+            CropRepository cropRepository,
+            BatchRecordRepository batchRecordRepository,
+            ListingRepository listingRepository) {
         this.cropRepository = cropRepository;
         this.batchRecordRepository = batchRecordRepository;
+        this.listingRepository = listingRepository;
     }
 
     public Crop addCrop(Crop crop) {
@@ -83,7 +99,8 @@ public class CropService {
                 try {
                     double add = Double.parseDouble(crop.getQuantity());
                     rec.setTotalQuantity((rec.getTotalQuantity() == null ? 0.0 : rec.getTotalQuantity()) + add);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
                 batchRecordRepository.save(rec);
             }
         }
@@ -132,7 +149,8 @@ public class CropService {
         List<Crop> crops = cropRepository.findByBatchId(batchId);
         for (Crop c : crops) {
             c.setQualityGrade(qualityGrade);
-            if (confidenceScore != null) c.setAiConfidenceScore(confidenceScore);
+            if (confidenceScore != null)
+                c.setAiConfidenceScore(confidenceScore);
             c.setUpdatedAt(LocalDateTime.now());
         }
         if (batchRecordRepository.existsById(batchId)) {
@@ -142,10 +160,12 @@ public class CropService {
         }
         return cropRepository.saveAll(crops);
     }
+
     public Crop updateCrop(Long cropId, Crop updatedCrop) {
         Optional<Crop> existing = cropRepository.findById(cropId);
 
-        if (existing.isEmpty()) return null;
+        if (existing.isEmpty())
+            return null;
 
         Crop crop = existing.get();
         crop.setCropName(updatedCrop.getCropName());
@@ -158,7 +178,8 @@ public class CropService {
 
     public Crop markHarvested(Long cropId, String actualHarvestDateStr, Double actualYield) {
         Optional<Crop> existing = cropRepository.findById(cropId);
-        if (existing.isEmpty()) return null;
+        if (existing.isEmpty())
+            return null;
 
         Crop crop = existing.get();
         crop.setStatus("HARVESTED");
@@ -176,7 +197,8 @@ public class CropService {
                 if (rec.getHarvestDate() == null) {
                     try {
                         rec.setHarvestDate(LocalDate.parse(actualHarvestDateStr));
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
                 rec.setStatus("HARVESTED");
                 batchRecordRepository.save(rec);
@@ -186,13 +208,72 @@ public class CropService {
         return cropRepository.save(crop);
     }
 
+    @Transactional
     public boolean deleteCrop(Long cropId) {
-        if (!cropRepository.existsById(cropId)) return false;
-        cropRepository.deleteById(cropId);
+
+        Crop crop = cropRepository.findById(cropId).orElse(null);
+        if (crop == null)
+            return false;
+
+        // 1️⃣ Soft delete crop
+        crop.setBlocked(true);
+        crop.setStatus("DELETED");
+        crop.setUpdatedAt(LocalDateTime.now());
+        cropRepository.save(crop);
+
+        String batchId = crop.getBatchId();
+
+        // 2️⃣ Disable related listings
+        List<Listing> listings = listingRepository.findByBatchId(batchId);
+        for (Listing listing : listings) {
+            if (listing.getCropId().equals(cropId)) {
+                listing.setStatus("DELETED");
+                listing.setUpdatedAt(LocalDateTime.now());
+                listingRepository.save(listing);
+            }
+        }
+
+        // 3️⃣ Check if batch has any ACTIVE crops
+        List<Crop> activeCrops = cropRepository.findByBatchId(batchId)
+                .stream()
+                .filter(c -> !Boolean.TRUE.equals(c.getBlocked()))
+                .toList();
+
+        if (activeCrops.isEmpty()) {
+            BatchRecord batch = batchRecordRepository.findById(batchId).orElse(null);
+            if (batch != null) {
+                batch.setStatus("EMPTY");
+                batch.setBlocked(true);
+                batch.setUpdatedAt(LocalDateTime.now());
+                batchRecordRepository.save(batch);
+            }
+        }
+
         return true;
     }
 
     public Crop getCropById(Long id) {
         return cropRepository.findById(id).orElse(null);
     }
+
+    public String saveCropImage(MultipartFile image) throws IOException {
+        if (image == null || image.isEmpty()) {
+            return null;
+        }
+
+        Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads");
+
+        if (!Files.exists(uploadDir)) {
+            Files.createDirectories(uploadDir);
+        }
+
+        String fileName = UUID.randomUUID() + "_" + image.getOriginalFilename();
+        Path filePath = uploadDir.resolve(fileName);
+
+        Files.write(filePath, image.getBytes());
+
+        // IMPORTANT: return public URL path
+        return "/uploads/" + fileName;
+    }
+
 }

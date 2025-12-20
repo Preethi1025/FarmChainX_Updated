@@ -14,16 +14,16 @@ public class Listing {
 
     @Column(name = "crop_id")
     private Long cropId;
-    
+
     @Column(name = "farmer_id")
     private String farmerId;
-    
+
     @Column(name = "batch_id")
     private String batchId;
 
     @Column(name = "price")
     private Double price;
-    
+
     @Column(name = "quantity")
     private Double quantity;
 
@@ -32,34 +32,91 @@ public class Listing {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-    
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    public Long getListingId() { return listingId; }
-    public void setListingId(Long listingId) { this.listingId = listingId; }
+    @Column(name = "crop_image_url")
+    private String cropImageUrl;
 
-    public Long getCropId() { return cropId; }
-    public void setCropId(Long cropId) { this.cropId = cropId; }
+    public Long getListingId() {
+        return listingId;
+    }
 
-    public String getFarmerId() { return farmerId; }
-    public void setFarmerId(String farmerId) { this.farmerId = farmerId; }
+    public void setListingId(Long listingId) {
+        this.listingId = listingId;
+    }
 
-    public String getBatchId() { return batchId; }
-    public void setBatchId(String batchId) { this.batchId = batchId; }
+    public Long getCropId() {
+        return cropId;
+    }
 
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
+    public void setCropId(Long cropId) {
+        this.cropId = cropId;
+    }
 
-    public Double getQuantity() { return quantity; }
-    public void setQuantity(Double quantity) { this.quantity = quantity; }
+    public String getFarmerId() {
+        return farmerId;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setFarmerId(String farmerId) {
+        this.farmerId = farmerId;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getBatchId() {
+        return batchId;
+    }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setBatchId(String batchId) {
+        this.batchId = batchId;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public Double getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Double quantity) {
+        this.quantity = quantity;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getCropImageUrl() {
+        return cropImageUrl;
+    }
+
+    public void setCropImageUrl(String cropImageUrl) {
+        this.cropImageUrl = cropImageUrl;
+    }
+
 }
