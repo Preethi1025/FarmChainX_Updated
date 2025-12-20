@@ -3,6 +3,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { Scan, Sprout, ShoppingCart, Wallet, X } from "lucide-react";
 import QRScanner from "../components/common/QRScanner";
+import { useLocation } from "react-router-dom";
 
 /* ---------------- CHECKOUT MODAL ---------------- */
 const CheckoutModal = ({ product, onClose, onConfirm }) => {
@@ -91,10 +92,19 @@ const CheckoutModal = ({ product, onClose, onConfirm }) => {
 
 /* ---------------- MAIN COMPONENT ---------------- */
 const Marketplace = () => {
+  const location = useLocation();
+
   const [showScanner, setShowScanner] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Cart
+  const [cart, setCart] = useState(() => {
+    const savedCart = localStorage.getItem("cart");
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+  const [showCartModal, setShowCartModal] = useState(false);
 
   /* ---------------- FETCH PRODUCTS ---------------- */
   const fetchProducts = async () => {
@@ -129,6 +139,13 @@ const Marketplace = () => {
     fetchProducts();
   }, []);
 
+  /* ---------------- SHOW CART MODAL IF NAVIGATED FROM DASHBOARD ---------------- */
+  useEffect(() => {
+    if (location.state?.showCart) {
+      setShowCartModal(true);
+    }
+  }, [location.state]);
+
   /* ---------------- BUY NOW ---------------- */
   const handleBuyNow = (product) => {
     const userId = localStorage.getItem("userId");
@@ -140,6 +157,26 @@ const Marketplace = () => {
     }
 
     setSelectedProduct(product);
+  };
+
+  /* ---------------- ADD TO CART ---------------- */
+  const handleAddToCart = (product) => {
+    const existing = cart.find(item => item.listingId === product.listingId);
+
+    let updatedCart;
+    if (existing) {
+      updatedCart = cart.map(item =>
+        item.listingId === product.listingId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+    } else {
+      updatedCart = [...cart, { ...product, quantity: 1 }];
+    }
+
+    setCart(updatedCart);
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    alert(`${product.cropName} added to cart!`);
   };
 
   /* ---------------- CONFIRM ORDER ---------------- */
@@ -271,7 +308,10 @@ const Marketplace = () => {
                     Buy Now
                   </button>
 
-                  <button className={buttonClass}>
+                  <button
+                    className={buttonClass}
+                    onClick={() => handleAddToCart(p)}
+                  >
                     <ShoppingCart size={16} />
                     Add to Cart
                   </button>
@@ -300,6 +340,47 @@ const Marketplace = () => {
           onClose={() => setSelectedProduct(null)}
           onConfirm={confirmOrder}
         />
+      )}
+
+      {/* CART MODAL */}
+      {showCartModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">My Cart 🧺</h2>
+              <button onClick={() => setShowCartModal(false)}><X /></button>
+            </div>
+
+            {cart.length === 0 ? (
+              <p className="text-gray-500">Your cart is empty</p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {cart.map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex justify-between border rounded-lg p-3 text-sm"
+                  >
+                    <span>{item.cropName}</span>
+                    <span>{item.quantity} × ₹{item.price}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowCartModal(false)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );

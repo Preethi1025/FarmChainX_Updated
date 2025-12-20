@@ -198,12 +198,10 @@ const MyOrders = () => {
                   time={trackingOrder.inTransitAt}
                   desc="Order is on the way to your address."
                 />
-                <TrackingItem
-                  icon={<Calendar className="text-purple-600" />}
-                  title="Expected Delivery"
-                  time={trackingOrder.expected_delivery}
-                  desc="Your order is expected to be delivered by this time."
-                />
+   
+
+
+
                 <TrackingItem
                   icon={<CheckCircle className="text-green-700" />}
                   title="Delivered"
@@ -234,5 +232,21 @@ const TrackingItem = ({ icon, title, time, desc }) => (
     </div>
   </div>
 );
+const formatExpectedDelivery = (dateStr) => {
+  if (!dateStr) return "Not set";
+
+  // Convert: "2025-12-22 12:12:00.000000"
+  // To:       "2025-12-22T12:12:00Z"
+  const isoLike = dateStr
+    .replace(" ", "T")       // space → T
+    .split(".")[0] + "Z";    // remove microseconds, add timezone
+
+  const date = new Date(isoLike);
+
+  return isNaN(date.getTime())
+    ? "Invalid date"
+    : date.toLocaleString();
+};
+
 
 export default MyOrders;

@@ -4,89 +4,86 @@ import BatchCard from "./BatchCard";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
 import {
-  Clock,
-  CheckCircle2,
-  ListChecks,
   ShoppingCart,
   Warehouse,
   Truck,
-  XCircle
+  CheckCircle2,
+  XCircle,
+  Phone,
+  MapPin,
+  Calendar
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
-const API_BASE = "http://localhost:8080/api";
+const API = "http://localhost:8080/api";
 
-/* -------------------- STATS CARD -------------------- */
-const StatsCard = ({ icon, label, value }) => (
-  <div className="p-4 rounded-xl shadow bg-white flex items-center gap-3">
-    {icon}
-    <div>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-xl font-semibold">{value}</p>
-    </div>
+/* ---------------- STATS CARD ---------------- */
+const StatsCard = ({ title, value, money }) => (
+  <div className="bg-white p-4 rounded-xl shadow border">
+    <p className="text-sm text-gray-500">{title}</p>
+    <p className="text-2xl font-bold text-green-700">
+      {money ? `₹${value}` : value}
+    </p>
   </div>
 );
 
-/* -------------------- ORDER TIMELINE -------------------- */
-const OrderTimeline = ({ order }) => {
+/* ---------------- STATUS BADGE ---------------- */
+const StatusBadge = ({ status }) => {
+  const styles = {
+    IN_WAREHOUSE: "bg-yellow-100 text-yellow-700",
+    IN_TRANSIT: "bg-blue-100 text-blue-700",
+    DELIVERED: "bg-green-100 text-green-700",
+    CANCELLED: "bg-red-100 text-red-700"
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status]}`}>
+      {status.replace("_", " ")}
+    </span>
+  );
+};
+
+/* ---------------- TIMELINE ---------------- */
+const OrderTimeline = ({ status }) => {
   const steps = [
-    { key: "ORDER_PLACED", label: "Order Placed", icon: <ShoppingCart /> },
-    { key: "IN_WAREHOUSE", label: "In Warehouse", icon: <Warehouse /> },
-    { key: "IN_TRANSIT", label: "In Transit", icon: <Truck /> },
-    { key: "DELIVERED", label: "Delivered", icon: <CheckCircle2 /> }
+    { key: "ORDER_PLACED", icon: <ShoppingCart size={18} />, label: "Placed" },
+    { key: "IN_WAREHOUSE", icon: <Warehouse size={18} />, label: "Warehouse" },
+    { key: "IN_TRANSIT", icon: <Truck size={18} />, label: "Transit" },
+    { key: "DELIVERED", icon: <CheckCircle2 size={18} />, label: "Delivered" }
   ];
 
   return (
-    <div className="mt-4 space-y-3">
-      {steps.map((step) => {
+    <div className="flex justify-between mt-4">
+      {steps.map(step => {
         const active =
-          steps.findIndex(s => s.key === order.status) >=
+          steps.findIndex(s => s.key === status) >=
           steps.findIndex(s => s.key === step.key);
 
         return (
           <div
             key={step.key}
-            className={`flex items-center gap-3 p-2 rounded-lg ${
-              active ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-400"
+            className={`flex flex-col items-center text-xs ${
+              active ? "text-green-600" : "text-gray-400"
             }`}
           >
             {step.icon}
-            <span className="font-medium">{step.label}</span>
+            <span>{step.label}</span>
           </div>
         );
       })}
-
-      {order.status === "CANCELLED" && (
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-red-50 text-red-700">
-          <XCircle />
-          <span className="font-medium">
-            Cancelled — {order.cancelReason || "No reason"}
-          </span>
-        </div>
-      )}
-
-      <p className="text-sm text-gray-600 mt-2">
-        <b>Expected Delivery:</b>{" "}
-        {order.expectedDelivery
-          ? new Date(order.expectedDelivery).toLocaleString()
-          : "Not set"}
-      </p>
     </div>
   );
 };
 
-/* -------------------- MAIN -------------------- */
+/* ---------------- MAIN ---------------- */
 const DistributorDashboard = () => {
   const { user } = useAuth();
   const distributorId = user?.id;
-  const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("BATCHES");
-  const [pending, setPending] = useState([]);
-  const [approved, setApproved] = useState([]);
+  const [tab, setTab] = useState("BATCHES");
+  const [pendingBatches, setPendingBatches] = useState([]);
+  const [approvedBatches, setApprovedBatches] = useState([]);
   const [orders, setOrders] = useState([]);
 
-  /* -------------------- LOAD DATA -------------------- */
   useEffect(() => {
     if (!distributorId) return;
     fetchBatches();
@@ -94,62 +91,51 @@ const DistributorDashboard = () => {
   }, [distributorId]);
 
   const fetchBatches = async () => {
-    try {
-      const [p, a] = await Promise.all([
-        axios.get(`${API_BASE}/batches/pending`),
-        axios.get(`${API_BASE}/batches/approved/${distributorId}`)
-      ]);
-      setPending(p.data || []);
-      setApproved(a.data || []);
-    } catch (err) {
-      console.error("Batch fetch error", err);
-    }
+    const p = await axios.get(`${API}/batches/pending`);
+    const a = await axios.get(`${API}/batches/approved/${distributorId}`);
+    setPendingBatches(p.data || []);
+    setApprovedBatches(a.data || []);
   };
 
   const fetchOrders = async () => {
-    try {
-      const res = await axios.get(
-        `${API_BASE}/orders/distributor/${distributorId}`
-      );
-      setOrders(res.data || []);
-    } catch (err) {
-      console.error("Order fetch error", err);
+    const res = await axios.get(`${API}/orders/distributor/${distributorId}`);
+    setOrders(res.data || []);
+  };
+
+  const updateStatus = async (id, status) => {
+    await axios.put(`${API}/orders/${id}/status`, null, {
+      params: { status, distributorId }
+    });
+    fetchOrders();
+  };
+
+const setExpectedDelivery = async (orderId, date) => {
+  if (!date) return;
+
+  await axios.put(
+    `${API}/orders/${orderId}/expected-delivery`,
+    null,
+    {
+      params: {
+        expectedDelivery: date,
+        distributorId
+      }
     }
-  };
+  );
+  fetchOrders();
+};
 
-  /* -------------------- ORDER ACTIONS -------------------- */
-  const updateOrderStatus = async (orderId, status) => {
-    await axios.put(
-      `${API_BASE}/orders/${orderId}/status`,
-      null,
-      { params: { status, distributorId } }
-    );
-    fetchOrders();
-  };
 
-  const setExpectedDelivery = async (orderId, date) => {
-    if (!date) return;
-    await axios.put(
-      `${API_BASE}/orders/${orderId}/expected-delivery`,
-      null,
-      { params: { expectedDelivery: date, distributorId } }
-    );
-    fetchOrders();
-  };
-
-  const cancelOrder = async (orderId) => {
+  const cancelOrder = async (id) => {
     const reason = prompt("Reason for cancellation?");
     if (!reason) return;
 
-    await axios.put(
-      `${API_BASE}/orders/${orderId}/cancel`,
-      null,
-      { params: { distributorId, reason } }
-    );
+    await axios.put(`${API}/orders/${id}/cancel`, null, {
+      params: { distributorId, reason }
+    });
     fetchOrders();
   };
 
-  /* -------------------- FILTERS -------------------- */
   const liveOrders = orders.filter(
     o => o.status !== "DELIVERED" && o.status !== "CANCELLED"
   );
@@ -158,139 +144,175 @@ const DistributorDashboard = () => {
     o => o.status === "DELIVERED" || o.status === "CANCELLED"
   );
 
+  const getDistributorProfit = (order) => {
+    const approved = order.pricePerKg;
+    const market = approved / 1.2;
+    const farmer = market * 1.1;
+    return Math.round((approved - farmer) * order.quantity);
+  };
+
+  const totalDistributorEarnings = historyOrders
+    .filter(o => o.status === "DELIVERED")
+    .reduce((sum, o) => sum + getDistributorProfit(o), 0);
+
   if (!distributorId) {
-    return <p className="mt-10 text-center">Login as distributor</p>;
+    return <p className="text-center mt-10">Login as distributor</p>;
   }
 
   return (
     <div className="p-6">
-      {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-semibold">Distributor Dashboard</h1>
-        <p className="text-gray-600">Supply chain & order handling</p>
-      </div>
+      <h1 className="text-3xl font-bold mb-6">Distributor Dashboard</h1>
 
       {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <StatsCard icon={<ShoppingCart />} label="Live Orders" value={liveOrders.length} />
-        <StatsCard icon={<CheckCircle2 />} label="Approved Batches" value={approved.length} />
-        <StatsCard icon={<Clock />} label="Pending Batches" value={pending.length} />
-        <StatsCard icon={<ListChecks />} label="Order History" value={historyOrders.length} />
+      <div className="grid md:grid-cols-3 gap-4 mb-6">
+        <StatsCard title="Total Distributor Earnings" value={totalDistributorEarnings} money />
+        <StatsCard title="Live Orders" value={liveOrders.length} />
+        <StatsCard title="Order History" value={historyOrders.length} />
       </div>
 
       {/* TABS */}
-      <div className="flex gap-4 mb-6">
-        {["BATCHES", "ORDERS"].map(tab => (
+      <div className="flex gap-3 mb-6">
+        {["BATCHES", "ORDERS", "HISTORY"].map(t => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={t}
+            onClick={() => setTab(t)}
             className={`px-5 py-2 rounded-lg font-medium ${
-              activeTab === tab ? "bg-green-600 text-white" : "bg-gray-100"
+              tab === t ? "bg-green-600 text-white" : "bg-gray-200"
             }`}
           >
-            {tab}
+            {t}
           </button>
         ))}
       </div>
 
-      {/* -------------------- BATCHES -------------------- */}
-      {activeTab === "BATCHES" && (
+      {/* ---------------- BATCHES (UNCHANGED) ---------------- */}
+      {tab === "BATCHES" && (
         <>
           <h2 className="text-xl font-semibold mb-4">Pending Batches</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {pending.length === 0 ? (
-              <p className="text-gray-500">No pending batches</p>
-            ) : (
-              pending.map(batch => (
-                <BatchCard
-                  key={batch.batchId}
-                  batch={batch}
-                  onApprove={() =>
-                    axios.put(
-                      `${API_BASE}/batches/distributor/approve/${batch.batchId}/${distributorId}`
-                    ).then(fetchBatches)
-                  }
-                  onReject={() => {
-                    const reason = prompt("Reason?");
-                    axios.put(
-                      `${API_BASE}/batches/distributor/reject/${batch.batchId}/${distributorId}`,
-                      { reason }
-                    ).then(fetchBatches);
-                  }}
-                  onTrace={() => navigate(`/trace/${batch.batchId}`)}
-                />
-              ))
-            )}
+          <div className="grid md:grid-cols-2 gap-4 mb-8">
+            {pendingBatches.map(b => (
+              <BatchCard key={b.batchId} batch={b} onAction={fetchBatches} />
+            ))}
           </div>
 
-          <h2 className="text-xl font-semibold mt-10 mb-4">Approved Batches</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {approved.length === 0 ? (
-              <p className="text-gray-500">No approved batches</p>
-            ) : (
-              approved.map(batch => (
-                <BatchCard
-                  key={batch.batchId}
-                  batch={batch}
-                  readOnly
-                  onTrace={() => navigate(`/trace/${batch.batchId}`)}
-                />
-              ))
-            )}
+          <h2 className="text-xl font-semibold mb-4">Approved Batches</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            {approvedBatches.map(b => (
+              <BatchCard key={b.batchId} batch={b} readOnly />
+            ))}
           </div>
         </>
       )}
 
-      {/* -------------------- ORDERS -------------------- */}
-      {activeTab === "ORDERS" && (
-        <>
-          <h2 className="text-xl font-semibold mb-4">Live Orders</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {liveOrders.length === 0 ? (
-              <p className="text-gray-500">No active orders</p>
-            ) : (
-              liveOrders.map(order => (
-                <motion.div
-                  key={order.orderId}
-                  className="p-5 bg-white rounded-2xl shadow border"
-                >
-                  <h3 className="font-semibold text-lg mb-2">{order.orderCode}</h3>
-                  <p><b>Crop:</b> {order.cropName}</p>
-                  <p><b>Quantity:</b> {order.quantity} kg</p>
-                  <p><b>Total:</b> ₹{order.totalAmount}</p>
+      {/* ---------------- LIVE ORDERS ---------------- */}
+      {tab === "ORDERS" && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {liveOrders.map(order => (
+            <motion.div key={order.orderId} className="bg-white p-5 rounded-xl shadow border">
+              <div className="flex justify-between mb-2">
+                <h3 className="font-semibold">{order.orderCode}</h3>
+                <StatusBadge status={order.status} />
+              </div>
 
-                  <OrderTimeline order={order} />
+              <p className="font-medium">{order.cropName}</p>
+              <p>Quantity: {order.quantity} kg</p>
+              <p>Total: ₹{order.totalAmount}</p>
 
-                  <div className="flex gap-2 mt-4 flex-wrap">
-                    <button onClick={() => updateOrderStatus(order.orderId, "IN_WAREHOUSE")}
-                      className="px-3 py-1 bg-green-600 text-white rounded">
-                      In Warehouse
-                    </button>
-                    <button onClick={() => updateOrderStatus(order.orderId, "IN_TRANSIT")}
-                      className="px-3 py-1 bg-blue-600 text-white rounded">
-                      In Transit
-                    </button>
-                    <button onClick={() => updateOrderStatus(order.orderId, "DELIVERED")}
-                      className="px-3 py-1 bg-green-700 text-white rounded">
-                      Delivered
-                    </button>
-                    <button onClick={() => cancelOrder(order.orderId)}
-                      className="px-3 py-1 bg-red-600 text-white rounded">
-                      Cancel
-                    </button>
-                    <input
-                      type="datetime-local"
-                      className="border rounded px-2 py-1"
-                      onChange={(e) =>
-                        setExpectedDelivery(order.orderId, e.target.value)
-                      }
-                    />
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </div>
-        </>
+              <p className="flex gap-2 text-sm mt-2"><Phone size={14} /> {order.contactNumber}</p>
+              <p className="flex gap-2 text-sm"><MapPin size={14} /> {order.deliveryAddress}</p>
+{/* <div className="mt-3">
+  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+    <Calendar size={16} />
+    Expected Delivery
+  </label>
+
+  <input
+    type="datetime-local"
+    className="mt-1 w-full border rounded px-2 py-1"
+    defaultValue={
+      order.expectedDelivery
+        ? order.expectedDelivery.slice(0, 16) // slice for input compatibility
+        : ""
+    }
+onChange={(e) => {
+  const localValue = e.target.value; // yyyy-MM-ddTHH:mm
+
+  if (!localValue) return;
+
+  // Convert local datetime to proper ISO (with timezone)
+  const isoValue = new Date(localValue).toISOString();
+
+  setExpectedDelivery(order.orderId, isoValue);
+}}
+  />
+
+  {order.expectedDelivery && (
+    <p className="text-xs text-gray-500 mt-1">
+      Saved: {new Date(order.expectedDelivery).toLocaleString()}
+    </p>
+  )}
+</div> */}
+
+
+              <OrderTimeline status={order.status} />
+
+              <div className="flex flex-wrap gap-2 mt-4">
+                <button onClick={() => updateStatus(order.orderId, "IN_WAREHOUSE")} className="bg-yellow-500 text-white px-3 py-1 rounded">
+                  Warehouse
+                </button>
+                <button onClick={() => updateStatus(order.orderId, "IN_TRANSIT")} className="bg-blue-500 text-white px-3 py-1 rounded">
+                  Transit
+                </button>
+                <button onClick={() => updateStatus(order.orderId, "DELIVERED")} className="bg-green-600 text-white px-3 py-1 rounded">
+                  Delivered
+                </button>
+                <button onClick={() => cancelOrder(order.orderId)} className="bg-red-600 text-white px-3 py-1 rounded">
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* ---------------- HISTORY (FULL DETAILS) ---------------- */}
+      {tab === "HISTORY" && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {historyOrders.map(order => (
+            <motion.div key={order.orderId} className="bg-green-50 p-5 rounded-xl shadow border">
+              <div className="flex justify-between mb-2">
+                <h3 className="font-semibold">{order.orderCode}</h3>
+                <StatusBadge status={order.status} />
+              </div>
+
+              <p className="font-medium">{order.cropName}</p>
+              <p>Quantity: {order.quantity} kg</p>
+              <p>Total: ₹{order.totalAmount}</p>
+
+              <p className="flex gap-2 text-sm mt-2"><Phone size={14} /> {order.contactNumber}</p>
+              <p className="flex gap-2 text-sm"><MapPin size={14} /> {order.deliveryAddress}</p>
+
+              <p className="text-sm mt-2">
+                Delivered at:{" "}
+                {order.expectedDelivery
+                  ? new Date(order.expectedDelivery).toLocaleString()
+                  : "Not set"}
+              </p>
+
+           {order.status === "DELIVERED" && (
+                <div className="mt-3 bg-white p-3 rounded border">
+                  💰 Distributor Profit: ₹{getDistributorProfit(order)}
+                </div>
+              )}
+
+              {order.status === "CANCELLED" && (
+                <div className="mt-3 bg-red-100 p-3 rounded border">
+                  ❌ Order Cancelled — No Profit
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
       )}
     </div>
   );

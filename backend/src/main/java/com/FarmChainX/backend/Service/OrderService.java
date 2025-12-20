@@ -136,20 +136,29 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        // 🔐 Authorization
         if (!order.getDistributorId().equals(distributorId)) {
             throw new RuntimeException("Unauthorized distributor");
         }
 
+        // 🚫 Already cancelled
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new RuntimeException("Order is already cancelled");
+        }
+
+        // 🚫 Delivered orders cannot be cancelled
         if (order.getStatus() == OrderStatus.DELIVERED) {
             throw new RuntimeException("Delivered orders cannot be cancelled");
         }
 
+        // 🔄 Restore listing quantity
         Listing listing = listingRepository.findById(order.getListingId())
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
 
         listing.setQuantity(listing.getQuantity() + order.getQuantity());
         listingRepository.save(listing);
 
+        // 🛑 Update order
         order.setStatus(OrderStatus.CANCELLED);
         order.setCancelReason(reason);
         order.setCancelledAt(LocalDateTime.now());
@@ -157,6 +166,7 @@ public class OrderService {
 
         return orderRepository.save(order);
     }
+
 
     // -------------------- PAYMENT SPLIT --------------------
     // -------------------- PAYMENT SPLIT --------------------
@@ -239,6 +249,7 @@ public class OrderService {
         dto.setStatus(order.getStatus());
         dto.setCancelReason(order.getCancelReason());
         dto.setExpectedDelivery(order.getExpectedDelivery());
+        //dto.setExpectedDelivery(order.getExpectedDelivery());
         dto.setCreatedAt(order.getCreatedAt());
 
         // 🔥 TRACKING TIMES
