@@ -3,8 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { Leaf, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-//import axios from "axios";
-//import ConsumerDashboard from '../../pages/ConsumerDashboard';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -21,49 +19,28 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   setError("");
 
-  try {
-    const response = await login(formData.email, formData.password);
-    console.log("Login response:", response);
+  const response = await login(formData.email, formData.password);
 
-    // 🔑 Normalize user object
-    const loggedUser = response.user ?? response;
+  console.log("Login response:", response);
 
-    if (!loggedUser) {
-      setError("Invalid login response");
-      return;
-    }
+ if (response.success) {
+  const role = response.user.role;
 
-    const { id, role, name, email } = loggedUser;
+  // Store role in localStorage
+  localStorage.setItem("userRole", role);
 
-    if (!id || !role) {
-      setError("Login failed: missing user data");
-      return;
-    }
-
-    // ✅ STORE CORRECTLY
-    localStorage.setItem("userId", id);
-    localStorage.setItem("userRole", role);
-    localStorage.setItem("userName", name);
-    localStorage.setItem("userEmail", email);
-
-    // ✅ NAVIGATE
-    switch (role) {
-      case "BUYER":
-        navigate("/ConsumerDashboard");
-        break;
-      case "FARMER":
-        navigate("/farmer-dashboard");
-        break;
-      case "DISTRIBUTOR":
-        navigate("/distributor-dashboard");
-        break;
-      default:
-        navigate("/");
-    }
-
-  } catch (err) {
-    console.error("Login failed:", err);
-    setError("Login failed. Please try again.");
+  if (role === "FARMER") {
+    navigate("/farmer-dashboard");
+  } else if (role === "DISTRIBUTOR") {
+    navigate("/distributor-dashboard");
+  } else if (role === "CONSUMER") {
+    navigate("/dashboard");
+  } else {
+    navigate("/dashboard");
+  }
+}
+  else {
+    setError("Invalid email or password");
   }
 };
 

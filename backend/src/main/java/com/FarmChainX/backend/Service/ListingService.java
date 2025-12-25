@@ -18,7 +18,6 @@ public class ListingService {
         this.listingRepository = listingRepository;
     }
 
-    // 🔒 FARMER: Create or update listing → ALWAYS PENDING
     @Transactional
     public Listing createOrActivateListing(Listing incoming) {
 
@@ -26,24 +25,27 @@ public class ListingService {
                 .findByBatchIdAndCropId(incoming.getBatchId(), incoming.getCropId());
 
         if (existing != null) {
+            // Update existing listing
             existing.setQuantity(incoming.getQuantity());
             existing.setPrice(incoming.getPrice());
-            existing.setStatus("PENDING"); // ✅ FIX
+            existing.setStatus("ACTIVE");
             existing.setUpdatedAt(LocalDateTime.now());
             return listingRepository.save(existing);
         }
 
-        incoming.setStatus("PENDING"); // ✅ FIX
+        // Create new listing
+        incoming.setStatus("ACTIVE");
         incoming.setCreatedAt(LocalDateTime.now());
         incoming.setUpdatedAt(LocalDateTime.now());
 
         return listingRepository.save(incoming);
     }
 
-    // 🏪 Marketplace → ONLY ACTIVE listings
     public List<Listing> getActiveListings() {
         return listingRepository.findByStatus("ACTIVE");
     }
+
+
 
     public List<Listing> getAllListings() {
         return listingRepository.findAll();
@@ -53,27 +55,52 @@ public class ListingService {
         return listingRepository.findById(id).orElse(null);
     }
 
-    // 🔍 Get listing by batch
+    // ✅ FIX: return first listing for batch
     public Listing getListingByBatchId(String batchId) {
-        return listingRepository.findFirstByBatchId(batchId).orElse(null);
+        List<Listing> listings = listingRepository.findByBatchId(batchId);
+        return listings.isEmpty() ? null : listings.get(0);
     }
 
-    // 🚚 DISTRIBUTOR APPROVAL (ONLY PLACE distributor_id IS SET)
-    @Transactional
-    public Listing approveListingByBatch(String batchId, String distributorId) {
-
-        Listing listing = listingRepository
-                .findFirstByBatchId(batchId)
-                .orElseThrow(() -> new RuntimeException("Listing not found for batch"));
-
-        listing.setDistributorId(distributorId); // ✅ STORED
-        listing.setStatus("ACTIVE");              // ✅ ACTIVATED
+    public Listing updateListing(Listing listing) {
         listing.setUpdatedAt(LocalDateTime.now());
+        return listingRepository.save(listing);
+    }
 
+    public Listing approveListing(Long listingId) {
+        Listing listing = getListingById(listingId);
+        if (listing == null) {
+            throw new RuntimeException("Listing not found");
+        }
+
+        listing.setStatus("ACTIVE");
+        listing.setUpdatedAt(LocalDateTime.now());
         return listingRepository.save(listing);
     }
 
     public boolean existsByCropId(Long cropId) {
         return listingRepository.existsByCropId(cropId);
     }
+    public Listing activateListingFromCrop(Listing incoming, Crop crop) {
+
+        Listing listing = listingRepository
+                .findFirstByBatchId(incoming.getBatchId())
+                .orElse(null);
+
+        if (listing == null) {
+            listing = new Listing();
+            listing.setBatchId(incoming.getBatchId());
+            listing.setCropId(incoming.getCropId());
+            listing.setFarmerId(incoming.getFarmerId());
+            listing.setCreatedAt(LocalDateTime.now());
+        }
+
+        // ✅ ALWAYS COPY PRICE FROM DB SOURCE
+        listing.setPrice(crop.getPrice());
+        listing.setQuantity(incoming.getQuantity());
+        listing.setStatus("ACTIVE");
+        listing.setUpdatedAt(LocalDateTime.now());
+
+        return listingRepository.save(listing);
+    }
+
 }

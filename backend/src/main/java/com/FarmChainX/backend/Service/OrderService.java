@@ -48,9 +48,9 @@ public class OrderService {
         double basePrice = listing.getPrice();
         double farmerProfit = basePrice * 0.10 * requestedQty;
         double distributorProfit = basePrice * 0.10 * requestedQty;
-        double totalAmount = (basePrice * requestedQty)
-                + farmerProfit
-                + distributorProfit;
+
+        // ✅ totalAmount should only be what consumer pays
+        double totalAmount = basePrice * requestedQty;
 
         Order order = new Order();
         order.setListingId(listingId);
@@ -89,7 +89,7 @@ public class OrderService {
         order.setStatus(status);
         order.setUpdatedAt(LocalDateTime.now());
 
-        // 🔥 AUTO SET TIMELINE (IMPORTANT FIX)
+        // 🔥 AUTO SET TIMELINE
         switch (status) {
             case IN_WAREHOUSE -> {
                 if (order.getWarehouseAt() == null) {
@@ -136,29 +136,24 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // 🔐 Authorization
         if (!order.getDistributorId().equals(distributorId)) {
             throw new RuntimeException("Unauthorized distributor");
         }
 
-        // 🚫 Already cancelled
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new RuntimeException("Order is already cancelled");
         }
 
-        // 🚫 Delivered orders cannot be cancelled
         if (order.getStatus() == OrderStatus.DELIVERED) {
             throw new RuntimeException("Delivered orders cannot be cancelled");
         }
 
-        // 🔄 Restore listing quantity
         Listing listing = listingRepository.findById(order.getListingId())
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
 
         listing.setQuantity(listing.getQuantity() + order.getQuantity());
         listingRepository.save(listing);
 
-        // 🛑 Update order
         order.setStatus(OrderStatus.CANCELLED);
         order.setCancelReason(reason);
         order.setCancelledAt(LocalDateTime.now());
@@ -167,8 +162,6 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-
-    // -------------------- PAYMENT SPLIT --------------------
     // -------------------- PAYMENT SPLIT --------------------
     private void settlePayment(Order order) {
         double farmerProfit = order.getFarmerProfit() != null ? order.getFarmerProfit() : 0.0;
@@ -178,26 +171,21 @@ public class OrderService {
         System.out.println("Farmer profit: " + farmerProfit);
         System.out.println("Distributor profit: " + distributorProfit);
 
-        // Fetch listing to get farmerId
         Listing listing = listingRepository.findById(order.getListingId()).orElse(null);
         if (listing == null) return;
 
-        // Update farmer balance
         User farmer = userRepository.findById(listing.getFarmerId()).orElse(null);
         if (farmer != null) {
             farmer.setBalance((farmer.getBalance() != null ? farmer.getBalance() : 0.0) + farmerProfit);
             userRepository.save(farmer);
         }
 
-        // Update distributor balance
         User distributor = userRepository.findById(order.getDistributorId()).orElse(null);
         if (distributor != null) {
             distributor.setBalance((distributor.getBalance() != null ? distributor.getBalance() : 0.0) + distributorProfit);
             userRepository.save(distributor);
         }
     }
-
-
 
     // -------------------- NOTIFICATION --------------------
     private void notifyDistributor(Order order) {
@@ -249,10 +237,8 @@ public class OrderService {
         dto.setStatus(order.getStatus());
         dto.setCancelReason(order.getCancelReason());
         dto.setExpectedDelivery(order.getExpectedDelivery());
-        //dto.setExpectedDelivery(order.getExpectedDelivery());
         dto.setCreatedAt(order.getCreatedAt());
 
-        // 🔥 TRACKING TIMES
         dto.setWarehouseAt(order.getWarehouseAt());
         dto.setInTransitAt(order.getInTransitAt());
         dto.setDeliveredAt(order.getDeliveredAt());
@@ -278,5 +264,4 @@ public class OrderService {
 
         return dto;
     }
-
 }

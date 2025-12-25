@@ -45,6 +45,11 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getStats());
     }
 
+    @GetMapping("/admins")
+    public ResponseEntity<?> getAdmins() {
+        return ResponseEntity.ok(userRepository.findByRole("ADMIN"));
+    }
+
     // ---------------- FETCH FARMERS ----------------
     @GetMapping("/farmers")
     public ResponseEntity<?> getFarmers() {
@@ -68,14 +73,23 @@ public class AdminController {
     public ResponseEntity<?> getCrops() {
         return ResponseEntity.ok(cropRepository.findAll());
     }
-    @PutMapping("/block/{id}")
-public ResponseEntity<?> block(@PathVariable String id) {
-    return ResponseEntity.ok(adminService.blockUser(id));
-}
 
-@PutMapping("/unblock/{id}")
-public ResponseEntity<?> unblock(@PathVariable String id) {
-    return ResponseEntity.ok(adminService.unblockUser(id));
-}
+    @PutMapping("/block/{id}")
+    public ResponseEntity<?> block(@PathVariable String id) {
+        return ResponseEntity.ok(adminService.blockUser(id));
+    }
+
+    @PutMapping("/unblock/{id}")
+    public ResponseEntity<?> unblock(@PathVariable String id) {
+        return ResponseEntity.ok(adminService.unblockUser(id));
+    }
+
+    // Add this method to AdminController.java:
+    @PutMapping("/role/{id}")
+    public ResponseEntity<?> changeRole(
+            @PathVariable String id,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(adminService.changeUserRole(id, body.get("role")));
+    }
 
 }
