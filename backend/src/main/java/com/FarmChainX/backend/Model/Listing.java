@@ -14,16 +14,16 @@ public class Listing {
 
     @Column(name = "crop_id")
     private Long cropId;
-    
+
     @Column(name = "farmer_id")
     private String farmerId;
-    
+
     @Column(name = "batch_id")
     private String batchId;
 
     @Column(name = "price")
     private Double price;
-    
+
     @Column(name = "quantity")
     private Double quantity;
 
@@ -32,49 +32,22 @@ public class Listing {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-    
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "crop_image_url")
+    private String cropImageUrl;
 
     private Double marketPrice;
     private Double farmerProfit;
     private Double distributorProfit;
+
     @Column(name = "distributor_id")
     private String distributorId;
 
-    public Double getMarketPrice() {
-        return marketPrice;
-    }
-
-    public void setMarketPrice(Double marketPrice) {
-        this.marketPrice = marketPrice;
-    }
-
-    public Double getFarmerProfit() {
-        return farmerProfit;
-    }
-
-
-    public String getDistributorId() {
-        return distributorId;
-    }
-
-    public void setDistributorId(String distributorId) {
-        this.distributorId = distributorId;
-    }
-
-    public void setFarmerProfit(Double farmerProfit) {
-        this.farmerProfit = farmerProfit;
-    }
-
-    public Double getDistributorProfit() {
-        return distributorProfit;
-    }
-
-    public void setDistributorProfit(Double distributorProfit) {
-        this.distributorProfit = distributorProfit;
-    }
-
+    // -----------------------------
+    // Getters and Setters
     public Long getListingId() { return listingId; }
     public void setListingId(Long listingId) { this.listingId = listingId; }
 
@@ -101,4 +74,19 @@ public class Listing {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getCropImageUrl() { return cropImageUrl; }
+    public void setCropImageUrl(String cropImageUrl) { this.cropImageUrl = cropImageUrl; }
+
+    public Double getMarketPrice() { return marketPrice; }
+    public void setMarketPrice(Double marketPrice) { this.marketPrice = marketPrice; }
+
+    public Double getFarmerProfit() { return farmerProfit; }
+    public void setFarmerProfit(Double farmerProfit) { this.farmerProfit = farmerProfit; }
+
+    public Double getDistributorProfit() { return distributorProfit; }
+    public void setDistributorProfit(Double distributorProfit) { this.distributorProfit = distributorProfit; }
+
+    public String getDistributorId() { return distributorId; }
+    public void setDistributorId(String distributorId) { this.distributorId = distributorId; }
 }

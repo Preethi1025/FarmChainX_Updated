@@ -14,4 +14,10 @@ public interface CropRepository extends JpaRepository<Crop, Long> {
 
    // Used for farmer crop listing
    List<Crop> findByFarmerId(String farmerId);
+
+   // Only unblocked crops for a farmer
+   List<Crop> findByFarmerIdAndBlockedFalse(String farmerId);
+
+   // Only unblocked crops in a batch
+   List<Crop> findByBatchIdAndBlockedFalse(String batchId);
 }

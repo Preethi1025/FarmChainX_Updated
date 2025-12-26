@@ -33,6 +33,16 @@ public class OrderDetailsDTO {
     private LocalDateTime warehouseAt;
     private LocalDateTime inTransitAt;
     private LocalDateTime deliveredAt;
+
+    public String getCropImageUrl() {
+        return cropImageUrl;
+    }
+
+    public void setCropImageUrl(String cropImageUrl) {
+        this.cropImageUrl = cropImageUrl;
+    }
+
+    private String cropImageUrl;
     public LocalDateTime getDeliveredAt() {
         return deliveredAt;
     }

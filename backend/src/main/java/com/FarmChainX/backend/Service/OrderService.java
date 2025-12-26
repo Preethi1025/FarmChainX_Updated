@@ -35,6 +35,11 @@ public class OrderService {
             String contactNumber
     ) {
 
+        // ---------------- VALIDATION ----------------
+        if (consumerId == null || consumerId.isEmpty()) {
+            throw new RuntimeException("Consumer ID cannot be null or empty");
+        }
+
         Listing listing = listingRepository.findById(listingId)
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
 
@@ -42,21 +47,25 @@ public class OrderService {
             throw new RuntimeException("Insufficient quantity available");
         }
 
+        // ---------------- UPDATE LISTING QUANTITY ----------------
         listing.setQuantity(listing.getQuantity() - requestedQty);
         listingRepository.save(listing);
 
+        // ---------------- CALCULATE AMOUNTS ----------------
         double basePrice = listing.getPrice();
         double farmerProfit = basePrice * 0.10 * requestedQty;
         double distributorProfit = basePrice * 0.10 * requestedQty;
-
-        // ✅ totalAmount should only be what consumer pays
         double totalAmount = basePrice * requestedQty;
 
+        // ---------------- CREATE ORDER ----------------
         Order order = new Order();
         order.setListingId(listingId);
         order.setBatchId(listing.getBatchId());
-        order.setConsumerId(consumerId);
-        order.setDistributorId(listing.getDistributorId());
+
+        // 🔒 Ensure correct IDs
+        order.setConsumerId(consumerId);                // must come from frontend / logged-in buyer
+        order.setDistributorId(listing.getDistributorId()); // must come from listing
+
         order.setQuantity(requestedQty);
         order.setPricePerKg(basePrice);
         order.setTotalAmount(totalAmount);
@@ -70,10 +79,22 @@ public class OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
+        // ---------------- LOGGING ----------------
+        System.out.println(">>> placeOrder called");
+        System.out.println("ListingId: " + listingId);
+        System.out.println("ConsumerId (from frontend): " + consumerId);
+        System.out.println("DistributorId (from listing): " + listing.getDistributorId());
+        System.out.println("RequestedQty: " + requestedQty);
+        System.out.println("DeliveryAddress: " + deliveryAddress);
+        System.out.println("ContactNumber: " + contactNumber);
+
+        // ---------------- NOTIFY DISTRIBUTOR ----------------
         notifyDistributor(order);
 
+        // ---------------- SAVE ORDER ----------------
         return orderRepository.save(order);
     }
+
 
     // -------------------- UPDATE ORDER STATUS --------------------
     @Transactional
@@ -231,11 +252,13 @@ public class OrderService {
         OrderDetailsDTO dto = new OrderDetailsDTO();
         dto.setOrderId(order.getOrderId());
         dto.setOrderCode("ORD-" + order.getOrderId());
+
         dto.setQuantity(order.getQuantity());
         dto.setPricePerKg(order.getPricePerKg());
         dto.setTotalAmount(order.getTotalAmount());
         dto.setStatus(order.getStatus());
         dto.setCancelReason(order.getCancelReason());
+
         dto.setExpectedDelivery(order.getExpectedDelivery());
         dto.setCreatedAt(order.getCreatedAt());
 
@@ -250,6 +273,9 @@ public class OrderService {
         if (crop != null) {
             dto.setCropName(crop.getCropName());
             dto.setCropType(crop.getCropType());
+
+            // 🔥 IMPORTANT LINE
+            dto.setCropImageUrl(crop.getCropImageUrl());
         }
 
         if (farmer != null) {
@@ -264,4 +290,5 @@ public class OrderService {
 
         return dto;
     }
+
 }

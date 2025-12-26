@@ -44,7 +44,8 @@ public class BatchService {
             batch.setBatchId(generateBatchId(batch.getCropType()));
 
         batch.setCreatedAt(LocalDateTime.now());
-        if (batch.getStatus() == null) batch.setStatus("PLANTED");
+        if (batch.getStatus() == null)
+            batch.setStatus("PLANTED");
 
         if ("HARVESTED".equalsIgnoreCase(batch.getStatus()) && batch.getHarvestDate() == null)
             batch.setHarvestDate(LocalDate.now());
@@ -68,50 +69,69 @@ public class BatchService {
     }
 
     // ------------------- DISTRIBUTOR PENDING BATCHES -------------------
-    public List<Map<String, Object>> getPendingBatchesForDistributor() {
-        List<BatchRecord> pending = batchRecordRepository.findByStatusIn(
-                Arrays.asList("HARVESTED", "SUBMITTED_FOR_APPROVAL")
-        );
+    public List<BatchRecord> getPendingBatchesForDistributor() {
+        List<BatchRecord> batches = batchRecordRepository.findByStatusIn(
+                List.of("HARVESTED", "SUBMITTED_FOR_APPROVAL"));
 
-        List<Map<String, Object>> response = new ArrayList<>();
-        for (BatchRecord b : pending) response.add(toBatchResponse(b));
-        return response;
+        return batches.stream()
+                .filter(b -> !Boolean.TRUE.equals(b.getBlocked()))
+                .filter(b -> {
+                    List<Crop> activeCrops = cropRepository.findByBatchId(b.getBatchId())
+                            .stream()
+                            .filter(c -> !Boolean.TRUE.equals(c.getBlocked()))
+                            .toList();
+                    return !activeCrops.isEmpty();
+                })
+                .toList();
     }
 
-
     // ------------------- DISTRIBUTOR APPROVED BATCHES -------------------
-    public List<Map<String, Object>> getApprovedBatches(String distributorId) {
-        List<BatchRecord> approved = batchRecordRepository.findByDistributorIdAndStatus(distributorId, "APPROVED");
+    public List<BatchRecord> getApprovedBatches(String distributorId) {
+        List<BatchRecord> batches = batchRecordRepository.findByDistributorIdAndStatus(
+                distributorId, "APPROVED");
+
+        return batches.stream()
+                .filter(b -> !Boolean.TRUE.equals(b.getBlocked()))
+                .filter(b -> {
+                    List<Crop> activeCrops = cropRepository.findByBatchId(b.getBatchId())
+                            .stream()
+                            .filter(c -> !Boolean.TRUE.equals(c.getBlocked()))
+                            .toList();
+                    return !activeCrops.isEmpty();
+                })
+                .toList();
+    }
+
+    // ------------------- LEGACY / OLD UI SUPPORT -------------------
+    public List<Map<String, Object>> getApprovedBatchesAsMap(String distributorId) {
+        List<BatchRecord> approved = batchRecordRepository.findByDistributorIdAndStatus(
+                distributorId, "APPROVED");
+
         List<Map<String, Object>> response = new ArrayList<>();
-        for (BatchRecord b : approved) response.add(toBatchResponse(b));
+        for (BatchRecord b : approved) {
+            response.add(toBatchResponse(b));
+        }
+
         return response;
     }
 
     // ------------------- APPROVE BATCH -------------------
     @Transactional
     public BatchRecord approveBatch(String batchId, String distributorId) {
-
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
 
-        if ("APPROVED".equals(batch.getStatus())) {
-            return batch;
-        }
+        if ("APPROVED".equals(batch.getStatus())) return batch;
 
         batch.setStatus("APPROVED");
         batch.setDistributorId(distributorId);
         batch.setUpdatedAt(LocalDateTime.now());
 
         List<Crop> crops = cropRepository.findByBatchId(batchId);
-
         for (Crop crop : crops) {
-
             double farmerPrice = crop.getPrice() != null ? crop.getPrice() : 0.0;
-
-            // 💰 Profit calculation
-            double farmerProfit = farmerPrice * 0.10;        // 10%
-            double distributorProfit = farmerPrice * 0.10;   // 10%
-
+            double farmerProfit = farmerPrice * 0.10;
+            double distributorProfit = farmerPrice * 0.10;
             double finalMarketPrice = farmerPrice + farmerProfit + distributorProfit;
 
             Listing listing = new Listing();
@@ -119,15 +139,8 @@ public class BatchService {
             listing.setFarmerId(batch.getFarmerId());
             listing.setCropId(crop.getCropId());
             listing.setDistributorId(distributorId);
-
-            listing.setQuantity(
-                    crop.getQuantity() != null ? Double.parseDouble(crop.getQuantity()) : 0.0
-            );
-
-            // 👇 IMPORTANT: Marketplace sees ONLY final price
+            listing.setQuantity(crop.getQuantity() != null ? Double.parseDouble(crop.getQuantity()) : 0.0);
             listing.setPrice(finalMarketPrice);
-
-            // Optional (recommended)
             listing.setFarmerProfit(farmerProfit);
             listing.setDistributorProfit(distributorProfit);
 
@@ -137,42 +150,23 @@ public class BatchService {
         return batchRecordRepository.save(batch);
     }
 
-
-
-    private Double parseDoubleSafe(String number) {
-        try {
-            return Double.parseDouble(number);
-        } catch (Exception e) {
-            return 0.0;
-        }
-    }
-
-    // ------------------- REJECT BATCH -------------------
     // ------------------- REJECT BATCH -------------------
     @Transactional
     public BatchRecord rejectBatch(String batchId, String distributorId, String reason) {
-
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
 
         batch.setStatus("REJECTED");
         batch.setRejectedBy(distributorId);
-        batch.setRejectionReason(reason);   // ✅ STORE REASON
+        batch.setRejectionReason(reason);
         batch.setBlocked(true);
         batch.setUpdatedAt(LocalDateTime.now());
-
         batchRecordRepository.save(batch);
 
-        // Optional but recommended: add trace entry
-        saveTrace(
-                batch,
-                "REJECTED - Reason: " + (reason != null ? reason : "N/A"),
-                distributorId
-        );
+        saveTrace(batch, "REJECTED - Reason: " + (reason != null ? reason : "N/A"), distributorId);
 
         return batch;
     }
-
 
     // ------------------- UPDATE STATUS -------------------
     @Transactional
@@ -183,7 +177,6 @@ public class BatchService {
         batch.setStatus(status);
         batch.setUpdatedAt(LocalDateTime.now());
 
-        // if status becomes HARVESTED ensure harvestDate
         if ("HARVESTED".equalsIgnoreCase(status) && batch.getHarvestDate() == null) {
             batch.setHarvestDate(LocalDate.now());
         }
@@ -199,12 +192,9 @@ public class BatchService {
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
 
-        // Update each crop's quality grade
         List<Crop> crops = cropRepository.findByBatchId(batchId);
         if (crops.isEmpty()) {
-            // still save grade on batch even if no crops found (frontend expects this)
             if (grade != null) {
-                // try to set average quality/confidence on batch if fields exist
                 try {
                     batch.setAvgQualityScore(confidence != null ? confidence.doubleValue() : batch.getAvgQualityScore());
                 } catch (Throwable ignored) {}
@@ -215,12 +205,9 @@ public class BatchService {
             return batch;
         }
 
-        for (Crop c : crops) {
-            c.setQualityGrade(grade);
-        }
+        for (Crop c : crops) c.setQualityGrade(grade);
         cropRepository.saveAll(crops);
 
-        // store confidence/avgQualityScore on batch record as well so frontend can read it easily
         if (confidence != null) {
             try {
                 batch.setAvgQualityScore(confidence.doubleValue());
@@ -228,7 +215,6 @@ public class BatchService {
         }
         batch.setUpdatedAt(LocalDateTime.now());
         batchRecordRepository.save(batch);
-
         saveTrace(batch, "QUALITY_UPDATED", userId);
         return batch;
     }
@@ -236,25 +222,20 @@ public class BatchService {
     // ------------------- SPLIT BATCH -------------------
     @Transactional
     public BatchRecord splitBatch(String parentBatchId, double splitQuantity, String userId) {
-
         BatchRecord parent = batchRecordRepository.findById(parentBatchId)
                 .orElseThrow(() -> new RuntimeException("Parent batch not found"));
 
         double parentTotal = parent.getTotalQuantity() != null ? parent.getTotalQuantity() : 0.0;
-        if (splitQuantity <= 0 || splitQuantity > parentTotal) {
+        if (splitQuantity <= 0 || splitQuantity > parentTotal)
             throw new RuntimeException("Invalid split quantity");
-        }
 
         List<Crop> parentCrops = cropRepository.findByBatchId(parentBatchId);
-        if (parentCrops.isEmpty()) {
-            throw new RuntimeException("No crops to split");
-        }
+        if (parentCrops.isEmpty()) throw new RuntimeException("No crops to split");
 
         double ratio = splitQuantity / parentTotal;
 
         BatchRecord child = new BatchRecord();
-        child.setBatchId(parent.getBatchId() + "-S" +
-                UUID.randomUUID().toString().replace("-", "").substring(0, 3).toUpperCase());
+        child.setBatchId(parent.getBatchId() + "-S" + UUID.randomUUID().toString().replace("-", "").substring(0, 3).toUpperCase());
         child.setFarmerId(parent.getFarmerId());
         child.setCropType(parent.getCropType());
         child.setStatus(parent.getStatus());
@@ -266,12 +247,10 @@ public class BatchService {
         List<Crop> childCrops = new ArrayList<>();
 
         for (Crop pc : parentCrops) {
-
             double parentQty = parseQuantity(pc.getQuantity());
             double childQty = roundToTwoDecimals(parentQty * ratio);
             double remainingQty = roundToTwoDecimals(parentQty - childQty);
 
-            // update parent
             pc.setQuantity(String.valueOf(remainingQty));
             parentUpdates.add(pc);
 
@@ -284,13 +263,7 @@ public class BatchService {
                 childCrop.setLocation(pc.getLocation());
                 childCrop.setExpectedHarvestDate(pc.getExpectedHarvestDate());
                 childCrop.setQualityGrade(pc.getQualityGrade());
-
-                // ✅ CRITICAL LINE
                 childCrop.setPrice(pc.getPrice());
-
-                // 🔍 debug (remove later)
-                System.out.println("Copied price: " + pc.getPrice());
-
                 childCrops.add(childCrop);
             }
         }
@@ -308,19 +281,15 @@ public class BatchService {
         return child;
     }
 
-
     // ------------------- MERGE BATCHES -------------------
     @Transactional
     public List<BatchRecord> mergeBatches(String targetBatchId, List<String> sourceBatchIds, String userId) {
-
         if (sourceBatchIds == null || sourceBatchIds.isEmpty())
             throw new RuntimeException("No source batches provided");
 
-        // Fetch target batch
         BatchRecord target = batchRecordRepository.findById(targetBatchId)
                 .orElseThrow(() -> new RuntimeException("Target batch not found"));
 
-        // Fetch source batches
         List<BatchRecord> sources = sourceBatchIds.stream()
                 .filter(id -> !id.equals(targetBatchId))
                 .map(id -> batchRecordRepository.findById(id)
@@ -331,19 +300,16 @@ public class BatchService {
         List<Crop> cropsToSave = new ArrayList<>();
 
         for (BatchRecord s : sources) {
-
             if (!Objects.equals(s.getCropType(), target.getCropType()))
                 throw new RuntimeException("Cannot merge batches of different crop types");
 
             List<Crop> scrops = cropRepository.findByBatchId(s.getBatchId());
-
             for (Crop c : scrops) {
                 c.setBatchId(target.getBatchId());
                 cropsToSave.add(c);
                 totalAdded += parseQuantity(c.getQuantity());
             }
 
-            // Block and mark source as merged
             s.setBlocked(true);
             s.setStatus("MERGED");
             s.setUpdatedAt(LocalDateTime.now());
@@ -352,25 +318,18 @@ public class BatchService {
             saveTrace(s, "MERGED_INTO -> " + targetBatchId, userId);
         }
 
-        // Save all crops under target batch
         cropRepository.saveAll(cropsToSave);
 
-        // Update target batch quantity
         double targetTotal = target.getTotalQuantity() != null ? target.getTotalQuantity() : 0.0;
         target.setTotalQuantity(roundToTwoDecimals(targetTotal + totalAdded));
-
-        // IMPORTANT: target batch should remain ACTIVE
         target.setStatus("ACTIVE");
         target.setUpdatedAt(LocalDateTime.now());
         batchRecordRepository.save(target);
 
         saveTrace(target, "MERGED_FROM_SOURCES", userId);
 
-        // Return updated batch list for farmer/distributor
         return batchRecordRepository.findByFarmerIdAndBlockedFalse(target.getFarmerId());
-
     }
-
 
     // ------------------- GET BATCH TRACES -------------------
     public List<BatchTrace> getBatchTrace(String batchId) {
@@ -411,7 +370,6 @@ public class BatchService {
             data.put("qualityGrade", c.getQualityGrade());
         }
 
-        // ✅ PRICE FIX (MOST IMPORTANT)
         Listing listing = listingService.getListingByBatchId(batch.getBatchId());
         if (listing != null) {
             data.put("price", listing.getPrice());
@@ -426,11 +384,8 @@ public class BatchService {
         return data;
     }
 
-
     private String generateBatchId(String cropType) {
-        String prefix = cropType != null && cropType.length() >= 3
-                ? cropType.substring(0, 3).toUpperCase()
-                : "CRP";
+        String prefix = cropType != null && cropType.length() >= 3 ? cropType.substring(0, 3).toUpperCase() : "CRP";
         String date = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
         String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         return "FCX-" + prefix + "-" + date + "-" + random;
@@ -445,6 +400,7 @@ public class BatchService {
         trace.setTimestamp(LocalDateTime.now());
         batchTraceRepository.save(trace);
     }
+
     public BatchRecord submitForApproval(String batchId, String userId) {
         BatchRecord batch = batchRecordRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
@@ -455,5 +411,4 @@ public class BatchService {
         saveTrace(batch, "SUBMITTED_FOR_APPROVAL", userId);
         return batch;
     }
-
 }

@@ -3,15 +3,18 @@ import { Navigate } from "react-router-dom";
 
 import Dashboard from "./Dashboard";
 import DistributorDashboard from "../components/Distributor/DistributorDashboard";
-
 import ConsumerDashboard from "./ConsumerDashboard";
 
 const DashboardWrapper = () => {
   const { user } = useAuth();
 
-  if (!user) return <Navigate to="/login" replace />;
+  // 🔑 ADDED: fallback to persisted role (from teammate code)
+  const role = user?.role || localStorage.getItem("userRole");
 
-  switch (user.role) {
+  // 🔒 Guard
+  if (!role) return <Navigate to="/login" replace />;
+
+  switch (role) {
     case "FARMER":
       return <Dashboard />;
 

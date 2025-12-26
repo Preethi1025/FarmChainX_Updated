@@ -8,13 +8,16 @@ import {
   X,
   Truck,
   Warehouse,
-  CheckCircle
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 /* =======================
-   STATUS CONFIG
+   CONFIG
 ======================= */
+const API_BASE = "http://localhost:8080";
+
 const statusLabels = {
   ORDER_PLACED: "Order Placed",
   IN_WAREHOUSE: "In Warehouse",
@@ -32,11 +35,12 @@ const MyOrders = () => {
   /* =======================
      FETCH ORDERS
   ======================= */
-  useEffect(() => {
-    if (!user) return;
+  const fetchOrders = () => {
+    if (!user?.id) return;
 
+    setLoading(true);
     axios
-      .get(`http://localhost:8080/api/orders/consumer/${user.id}/full`)
+      .get(`${API_BASE}/api/orders/consumer/${user.id}/full`)
       .then((res) => {
         setOrders(res.data || []);
         setLoading(false);
@@ -45,7 +49,35 @@ const MyOrders = () => {
         console.error("Error fetching orders", err);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchOrders();
   }, [user]);
+
+  /* =======================
+     CANCEL ORDER
+  ======================= */
+  const cancelOrder = async (orderId) => {
+    const confirm = window.confirm(
+      "Are you sure you want to cancel this order?"
+    );
+    if (!confirm) return;
+
+    try {
+      await axios.put(
+        `${API_BASE}/api/orders/${orderId}/cancel`,
+        null,
+        { params: { reason: "Cancelled by consumer" } }
+      );
+
+      alert("Order cancelled successfully");
+      fetchOrders();
+    } catch (err) {
+      console.error("Cancel failed", err);
+      alert("Unable to cancel order");
+    }
+  };
 
   if (loading) {
     return (
@@ -57,11 +89,7 @@ const MyOrders = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white px-6 py-10">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-6xl mx-auto"
-      >
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">
           My Orders 📦
         </h1>
@@ -70,86 +98,103 @@ const MyOrders = () => {
           <p className="text-gray-500">You haven’t placed any orders yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {orders.map((order) => (
-              <motion.div
-                key={order.orderId}
-                whileHover={{ scale: 1.02 }}
-                className={`bg-white rounded-2xl shadow-md p-6 border-l-4 ${
-                  order.status === "CANCELLED"
-                    ? "border-red-500"
-                    : "border-green-500"
-                }`}
-              >
-                {/* HEADER */}
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    {order.orderCode}
-                  </h2>
-                  <span
-                    className={`px-3 py-1 text-sm rounded-full font-medium ${
-                      order.status === "CANCELLED"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    {statusLabels[order.status]}
-                  </span>
-                </div>
+            {orders.map((order) => {
+              const imageUrl =
+                order.cropImageUrl?.startsWith("/uploads")
+                  ? `${API_BASE}${order.cropImageUrl}`
+                  : order.imageName
+                  ? `${API_BASE}/uploads/${order.imageName}`
+                  : null;
 
-                {/* DETAILS */}
-                <div className="space-y-2 text-gray-600 text-sm mb-4">
-                  <p><b>Crop:</b> {order.cropName} ({order.cropType})</p>
-                  <p><b>Farmer:</b> {order.farmerName} | {order.farmerContact}</p>
-                  <p><b>Distributor:</b> {order.distributorName} | {order.distributorContact}</p>
-                </div>
-
-                <div className="space-y-2 text-gray-600 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Package size={16} /> Quantity: <b>{order.quantity} kg</b>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <IndianRupee size={16} /> Total: <b>₹{order.totalAmount}</b>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} /> Ordered On:{" "}
-                    {new Date(order.createdAt).toLocaleString()}
-                  </div>
-                </div>
-
-                {/* CANCELLED INFO */}
-                {order.status === "CANCELLED" && (
-                  <div className="mt-4 p-4 bg-red-50 border border-red-300 rounded-lg">
-                    <p className="text-red-700 font-semibold">
-                      ❌ Order Cancelled by Distributor
-                    </p>
-                    <p className="text-red-600 text-sm mt-1">
-                      <b>Reason:</b> {order.cancelReason || "No reason provided"}
-                    </p>
-                  </div>
-                )}
-
-                {/* TRACK BUTTON */}
-                <button
-                  type="button"
-                  disabled={order.status === "CANCELLED"}
-                  onClick={() => {
-                    if (order.status !== "CANCELLED") {
-                      setTrackingOrder(order);
-                    }
-                  }}
-                  className={`mt-5 w-full px-5 py-2 rounded-lg font-semibold text-white transition ${
+              return (
+                <motion.div
+                  key={order.orderId}
+                  whileHover={{ scale: 1.02 }}
+                  className={`bg-white rounded-2xl shadow-md p-6 border-l-4 ${
                     order.status === "CANCELLED"
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-700"
+                      ? "border-red-500"
+                      : "border-green-500"
                   }`}
                 >
-                  Track Order
-                </button>
-              </motion.div>
-            ))}
+                  {/* IMAGE */}
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={order.cropName}
+                      className="w-full h-40 object-cover rounded-lg mb-4"
+                      onError={(e) => (e.currentTarget.style.display = "none")}
+                    />
+                  ) : (
+                    <div className="w-full h-40 bg-gray-100 flex items-center justify-center rounded-lg mb-4 text-gray-400 text-sm">
+                      No Image Available
+                    </div>
+                  )}
+
+                  {/* HEADER */}
+                  <div className="flex justify-between items-center mb-3">
+                    <h2 className="text-lg font-semibold">
+                      {order.orderCode}
+                    </h2>
+                    <span
+                      className={`px-3 py-1 text-sm rounded-full font-medium ${
+                        order.status === "CANCELLED"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {statusLabels[order.status]}
+                    </span>
+                  </div>
+
+                  {/* DETAILS */}
+                  <div className="text-sm text-gray-600 space-y-1 mb-3">
+                    <p><b>Crop:</b> {order.cropName} ({order.cropType})</p>
+                    <p><b>Farmer:</b> {order.farmerName}</p>
+                    <p><b>Distributor:</b> {order.distributorName}</p>
+                  </div>
+
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Package size={16} /> {order.quantity} kg
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <IndianRupee size={16} /> ₹{order.totalAmount}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar size={16} />
+                      {new Date(order.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* ACTION BUTTONS */}
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      onClick={() => setTrackingOrder(order)}
+                      disabled={order.status === "CANCELLED"}
+                      className={`flex-1 px-4 py-2 rounded-lg font-semibold text-white ${
+                        order.status === "CANCELLED"
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700"
+                      }`}
+                    >
+                      Track Order
+                    </button>
+
+                    {order.status === "ORDER_PLACED" && (
+                      <button
+                        onClick={() => cancelOrder(order.orderId)}
+                        className="flex items-center gap-1 px-4 py-2 rounded-lg font-semibold bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <XCircle size={16} /> Cancel
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* =======================
           TRACKING MODAL
@@ -163,14 +208,13 @@ const MyOrders = () => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl w-full max-w-lg p-6 relative"
+              className="bg-white rounded-2xl w-full max-w-lg p-6"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
             >
-              {/* HEADER */}
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800">
+                <h2 className="text-xl font-bold">
                   📦 Tracking – {trackingOrder.orderCode}
                 </h2>
                 <button onClick={() => setTrackingOrder(null)}>
@@ -178,37 +222,26 @@ const MyOrders = () => {
                 </button>
               </div>
 
-              {/* TRACKING STEPS */}
-              <div className="space-y-4">
-                <TrackingItem
-                  icon={<CheckCircle className="text-green-600" />}
-                  title="Order Placed"
-                  time={trackingOrder.createdAt}
-                  desc="Your order has been placed successfully."
-                />
-                <TrackingItem
-                  icon={<Warehouse className="text-blue-600" />}
-                  title="In Warehouse"
-                  time={trackingOrder.warehouseAt}
-                  desc="Order received and packed at warehouse."
-                />
-                <TrackingItem
-                  icon={<Truck className="text-orange-600" />}
-                  title="Out for Delivery"
-                  time={trackingOrder.inTransitAt}
-                  desc="Order is on the way to your address."
-                />
-   
-
-
-
-                <TrackingItem
-                  icon={<CheckCircle className="text-green-700" />}
-                  title="Delivered"
-                  time={trackingOrder.deliveredAt}
-                  desc="Order delivered successfully."
-                />
-              </div>
+              <TrackingItem
+                icon={<CheckCircle className="text-green-600" />}
+                title="Order Placed"
+                time={trackingOrder.createdAt}
+              />
+              <TrackingItem
+                icon={<Warehouse className="text-blue-600" />}
+                title="In Warehouse"
+                time={trackingOrder.warehouseAt}
+              />
+              <TrackingItem
+                icon={<Truck className="text-orange-600" />}
+                title="Out for Delivery"
+                time={trackingOrder.inTransitAt}
+              />
+              <TrackingItem
+                icon={<CheckCircle className="text-green-700" />}
+                title="Delivered"
+                time={trackingOrder.deliveredAt}
+              />
             </motion.div>
           </motion.div>
         )}
@@ -218,35 +251,18 @@ const MyOrders = () => {
 };
 
 /* =======================
-   TRACK ITEM COMPONENT
+   TRACK ITEM
 ======================= */
-const TrackingItem = ({ icon, title, time, desc }) => (
-  <div className="flex gap-3 items-start">
-    <div>{icon}</div>
+const TrackingItem = ({ icon, title, time }) => (
+  <div className="flex gap-3 mb-3">
+    {icon}
     <div>
-      <p className="font-semibold text-gray-800">{title}</p>
+      <p className="font-semibold">{title}</p>
       <p className="text-sm text-gray-500">
         {time ? new Date(time).toLocaleString() : "Pending"}
       </p>
-      <p className="text-sm text-gray-600">{desc}</p>
     </div>
   </div>
 );
-const formatExpectedDelivery = (dateStr) => {
-  if (!dateStr) return "Not set";
-
-  // Convert: "2025-12-22 12:12:00.000000"
-  // To:       "2025-12-22T12:12:00Z"
-  const isoLike = dateStr
-    .replace(" ", "T")       // space → T
-    .split(".")[0] + "Z";    // remove microseconds, add timezone
-
-  const date = new Date(isoLike);
-
-  return isNaN(date.getTime())
-    ? "Invalid date"
-    : date.toLocaleString();
-};
-
 
 export default MyOrders;

@@ -18,16 +18,40 @@ const BatchCard = ({
   onTrace,
   readOnly = false,
 }) => {
+  if (!batch || batch.status === "DELETED" || batch.status === "EMPTY") {
+    return null;
+  }
+
+  // ✅ SAFE IMAGE URL (handles spaces + missing image)
+  const imageUrl = batch.cropImageUrl
+    ? `http://localhost:8080${encodeURI(batch.cropImageUrl)}`
+    : "/placeholder.png";
+
   return (
-    <div className="p-5 rounded-2xl shadow-lg bg-white border border-gray-200 hover:shadow-xl transition-all duration-200">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-          <Leaf size={18} /> {batch.cropType || "Unknown Crop"}
-        </h3>
-        <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+    <div className="p-5 rounded-2xl shadow-lg bg-white border border-gray-200 hover:shadow-xl transition-all duration-200 overflow-hidden">
+
+      {/* IMAGE SECTION */}
+      <div className="relative mb-4 rounded-xl overflow-hidden aspect-[16/10]">
+        <img
+          src={imageUrl}
+          alt={batch.cropType || "Crop"}
+          className="w-full h-full object-cover hover:scale-105 transition duration-500"
+          onError={(e) => {
+            e.currentTarget.onerror = null; // 🛑 prevent infinite loop
+            e.currentTarget.src = "/placeholder.png";
+          }}
+        />
+
+        {/* STATUS BADGE */}
+        <span className="absolute top-3 right-3 bg-yellow-100 text-yellow-700 text-xs px-3 py-1 rounded-full shadow">
           {batch.status}
         </span>
+
+        {/* CROP NAME OVER IMAGE */}
+        <div className="absolute bottom-3 left-3 bg-black/50 text-white px-3 py-1 rounded-lg text-sm flex items-center gap-2">
+          <Leaf size={16} />
+          {batch.cropType || "Unknown Crop"}
+        </div>
       </div>
 
       {/* BASIC INFO */}
@@ -55,7 +79,8 @@ const BatchCard = ({
 
         <p className="flex items-center gap-2">
           <User size={16} className="text-blue-600" />
-          Farmer: <strong>{batch.farmerName || batch.farmerId || "N/A"}</strong>
+          Farmer:{" "}
+          <strong>{batch.farmerName || batch.farmerId || "N/A"}</strong>
         </p>
 
         <p className="flex items-center gap-2">

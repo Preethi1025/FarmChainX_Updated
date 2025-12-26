@@ -5,6 +5,7 @@ import com.FarmChainX.backend.Service.CropService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -99,9 +100,12 @@ public class CropController {
             Double actualYield = null;
             if (body.get("actualYield") != null) {
                 Object v = body.get("actualYield");
-                if (v instanceof Number) actualYield = ((Number) v).doubleValue();
+                if (v instanceof Number)
+                    actualYield = ((Number) v).doubleValue();
                 else {
-                    try { actualYield = Double.parseDouble(v.toString()); } catch (Exception ignored) {}
+                    try {
+                        actualYield = Double.parseDouble(v.toString());
+                    } catch (Exception ignored) {}
                 }
             }
             Crop updated = cropService.markHarvested(id, actualHarvestDate, actualYield);
@@ -117,4 +121,25 @@ public class CropController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
+
+    @PostMapping("/add-with-image")
+    public ResponseEntity<?> addCropWithImage(
+            @RequestPart("crop") Crop crop,
+            @RequestPart("image") MultipartFile image) {
+        try {
+            String imageUrl = cropService.saveCropImage(image);
+            crop.setCropImageUrl(imageUrl);
+            crop.setQualityCheckStatus("PENDING");
+            return ResponseEntity.ok(cropService.addCrop(crop));
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Failed to add crop with image: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
 }

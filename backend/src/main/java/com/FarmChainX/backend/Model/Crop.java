@@ -26,8 +26,8 @@ public class Crop {
 
     @Column(name = "price")
     private Double price;
-    private String quantity;
 
+    private String quantity;
     private String description;
 
     @Column(name = "created_at")
@@ -40,7 +40,6 @@ public class Crop {
     private String cropType;
 
     private String variety;
-
     private String location;
 
     @Column(name = "qr_code_url")
@@ -75,49 +74,28 @@ public class Crop {
     @Column(columnDefinition = "TEXT")
     private String traceLog;
 
+    @Column(name = "farmer_price")
     private Double farmerPrice;
 
-    public Double getFarmerPrice() {
-        return farmerPrice;
-    }
+    @Column(name = "crop_image_url")
+    private String cropImageUrl;
 
-    public void setFarmerPrice(Double farmerPrice) {
-        this.farmerPrice = farmerPrice;
-    }
-    // ---------- getters / setters ----------
+    @Column(name = "quality_check_status")
+    private String qualityCheckStatus = "PENDING";
 
-    public Long getCropId() {
-        return cropId;
-    }
+    // -----------------------------
+    // Getters and Setters
+    public Long getCropId() { return cropId; }
+    public void setCropId(Long cropId) { this.cropId = cropId; }
 
-    public void setCropId(Long cropId) {
-        this.cropId = cropId;
-    }
+    public String getFarmerId() { return farmerId; }
+    public void setFarmerId(String farmerId) { this.farmerId = farmerId; }
 
-    public String getFarmerId() {
-        return farmerId;
-    }
+    public Boolean getBlocked() { return blocked; }
+    public void setBlocked(Boolean blocked) { this.blocked = blocked; }
 
-    public void setFarmerId(String farmerId) {
-        this.farmerId = farmerId;
-    }
-
-    // Updated blocked getter/setter to use Boolean consistently
-    public Boolean getBlocked() {
-        return blocked;
-    }
-
-    public void setBlocked(Boolean blocked) {
-        this.blocked = blocked;
-    }
-
-    public String getCropName() {
-        return cropName;
-    }
-
-    public void setCropName(String cropName) {
-        this.cropName = cropName;
-    }
+    public String getCropName() { return cropName; }
+    public void setCropName(String cropName) { this.cropName = cropName; }
 
     public Double getPrice() { return price; }
     public void setPrice(Double price) { this.price = price; }
@@ -178,4 +156,13 @@ public class Crop {
 
     public String getTraceLog() { return traceLog; }
     public void setTraceLog(String traceLog) { this.traceLog = traceLog; }
+
+    public Double getFarmerPrice() { return farmerPrice; }
+    public void setFarmerPrice(Double farmerPrice) { this.farmerPrice = farmerPrice; }
+
+    public String getCropImageUrl() { return cropImageUrl; }
+    public void setCropImageUrl(String cropImageUrl) { this.cropImageUrl = cropImageUrl; }
+
+    public String getQualityCheckStatus() { return qualityCheckStatus; }
+    public void setQualityCheckStatus(String qualityCheckStatus) { this.qualityCheckStatus = qualityCheckStatus; }
 }

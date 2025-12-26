@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { Scan, Sprout, ShoppingCart, Wallet, X, Search } from "lucide-react";
+import {
+  Scan,
+  Sprout,
+  ShoppingCart,
+  Wallet,
+  X,
+  Search,
+} from "lucide-react";
 import QRScanner from "../components/common/QRScanner";
+import { getImageUrl } from "../utils/image";
 import { useLocation } from "react-router-dom";
 
 /* ---------------- CHECKOUT MODAL ---------------- */
@@ -89,7 +97,6 @@ const Marketplace = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Cart
   const [cart, setCart] = useState(() => {
@@ -98,8 +105,12 @@ const Marketplace = () => {
   });
   const [showCartModal, setShowCartModal] = useState(false);
 
-  // Search
+  // Search & Filter
   const [search, setSearch] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   /* ---------------- FETCH PRODUCTS ---------------- */
   const fetchProducts = async () => {
@@ -108,8 +119,9 @@ const Marketplace = () => {
       const res = await axios.get("http://localhost:8080/api/listings/");
       const listings = Array.isArray(res.data) ? res.data : [];
 
-      const activeProducts = listings
+      const validProducts = listings
         .filter((l) => l.status === "ACTIVE" || l.status === "APPROVED")
+        .filter((l) => l.price > 0 && l.quantity > 0 && l.cropName && l.batchId)
         .map((l) => ({
           listingId: l.listingId,
           batchId: l.batchId,
@@ -119,9 +131,11 @@ const Marketplace = () => {
           quantity: Number(l.quantity) || 0,
           qualityGrade: l.qualityGrade || "Not Graded",
           traceUrl: l.traceUrl || `/trace/${l.batchId}`,
+          location: l.location || "Unknown",
+          cropImageUrl: l.cropImageUrl || null,
         }));
 
-      setProducts(activeProducts);
+      setProducts(validProducts);
     } catch (err) {
       console.error("Marketplace load failed:", err);
       setProducts([]);
@@ -170,47 +184,60 @@ const Marketplace = () => {
   };
 
   /* ---------------- CONFIRM ORDER ---------------- */
-  const confirmOrder = async (qty, address, contact) => {
-    if (!address || !contact) {
-      alert("Please fill all delivery details");
-      return;
-    }
-    try {
-      const res = await axios.post(
-        "http://localhost:8080/api/orders/place",
-        null,
-        {
-          params: {
-            listingId: selectedProduct.listingId,
-            consumerId: localStorage.getItem("userId"),
-            quantity: qty,
-            deliveryAddress: address,
-            contactNumber: contact,
-          },
-        }
-      );
-      alert(
-        `✅ Order Placed Successfully!\nOrder ID: ${res.data.orderId}\nTotal Amount: ₹${res.data.totalAmount.toFixed(2)}`
-      );
-      setSelectedProduct(null);
-      fetchProducts();
-    } catch (err) {
-      console.error("Order failed:", err);
-      alert("Order failed");
-    }
-  };
+  /* ---------------- CONFIRM ORDER ---------------- */
+const confirmOrder = async (qty, address, contact) => {
+  const consumerId = localStorage.getItem("buyerId") || localStorage.getItem("userId");
+  console.log(consumerId); // Ensure this is the buyer's ID
+  if (!consumerId) {
+    alert("Please login as a buyer to place an order");
+    return;
+  }
 
-  const getQualityColor = (grade) => {
-    switch (grade) {
-      case "A": return "text-green-700 bg-green-100";
-      case "B": return "text-yellow-700 bg-yellow-100";
-      case "C": return "text-orange-700 bg-orange-100";
-      default: return "text-gray-600 bg-gray-100";
-    }
-  };
+  if (!address || !contact) {
+    alert("Please fill all delivery details");
+    return;
+  }
 
+  try {
+    const res = await axios.post(
+      "http://localhost:8080/api/orders/place",
+      null,
+      {
+        params: {
+          listingId: selectedProduct.listingId,
+          consumerId: consumerId,   // send correct consumerId
+          quantity: qty,
+          deliveryAddress: address,
+          contactNumber: contact,
+        },
+      }
+    );
+
+    alert(
+      `✅ Order Placed Successfully!\nOrder ID: ${res.data.orderId}\nTotal Amount: ₹${res.data.totalAmount.toFixed(2)}`
+    );
+
+    setSelectedProduct(null);
+    fetchProducts();
+  } catch (err) {
+    console.error("Order failed:", err);
+    alert("Order failed");
+  }
+};
+
+
+  /* ---------------- FILTER + SORT ---------------- */
   const filteredProducts = products
-    .filter((p) => p.cropName.toLowerCase().includes(search.toLowerCase()));
+    .filter((p) => p.cropName.toLowerCase().includes(search.toLowerCase()))
+    .filter((p) => (minPrice ? p.price >= minPrice : true))
+    .filter((p) => (maxPrice ? p.price <= maxPrice : true))
+    .sort((a, b) => {
+      if (sortBy === "PRICE_ASC") return a.price - b.price;
+      if (sortBy === "PRICE_DESC") return b.price - a.price;
+      if (sortBy === "QTY_ASC") return a.quantity - b.quantity;
+      if (sortBy === "QTY_DESC") return b.quantity - a.quantity;
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -220,17 +247,14 @@ const Marketplace = () => {
     );
   }
 
-  const buttonClass =
-    "w-full border border-green-600 text-green-600 hover:bg-green-50 py-2 rounded-lg flex items-center justify-center space-x-2";
-
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Marketplace</h1>
+            <h1 className="text-3xl font-bold">🌾 Marketplace</h1>
             <p className="text-gray-600">Buy fresh, traceable products directly from farmers</p>
           </div>
 
@@ -242,16 +266,43 @@ const Marketplace = () => {
           </button>
         </div>
 
-        {/* SEARCH */}
-        <div className="mb-6 relative w-full max-w-md">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        {/* SEARCH & FILTER */}
+        <div className="bg-white rounded-2xl shadow p-4 mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="relative md:col-span-2">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search crop name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 w-full border rounded-xl px-3 py-2"
+            />
+          </div>
           <input
-            type="text"
-            placeholder="Search crop name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 w-full border rounded-xl px-3 py-2"
+            type="number"
+            placeholder="Min ₹"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className="border rounded-xl px-3 py-2"
           />
+          <input
+            type="number"
+            placeholder="Max ₹"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="border rounded-xl px-3 py-2"
+          />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="border rounded-xl px-3 py-2"
+          >
+            <option value="">Sort</option>
+            <option value="PRICE_ASC">Price ↑</option>
+            <option value="PRICE_DESC">Price ↓</option>
+            <option value="QTY_ASC">Qty ↑</option>
+            <option value="QTY_DESC">Qty ↓</option>
+          </select>
         </div>
 
         {/* PRODUCTS GRID */}
@@ -265,27 +316,44 @@ const Marketplace = () => {
                 whileHover={{ scale: 1.02 }}
                 className="bg-white rounded-xl shadow p-4 flex flex-col justify-between"
               >
+                {/* IMAGE */}
+                <div className="relative h-40 w-full mb-3">
+                  <img
+                    src={getImageUrl(p.cropImageUrl)}
+                    onError={(e) => (e.currentTarget.src = "/placeholder.png")}
+                    alt={p.cropName}
+                    className="h-full w-full object-cover rounded-lg"
+                  />
+                </div>
+
                 <div>
                   <h2 className="text-lg font-semibold">{p.cropName}</h2>
                   <p className="text-sm text-gray-600">Farmer: {p.farmerId}</p>
-                  <p className="mt-2 text-xl font-bold text-green-700">₹{p.price} / kg</p>
+                  <p className="mt-1 text-xl font-bold text-green-700">₹{p.price} / kg</p>
                   <p className="text-sm text-gray-500">Available: {p.quantity} kg</p>
-                  <span className={`text-xs px-2 py-1 rounded ${getQualityColor(p.qualityGrade)}`}>
+                  <span className="inline-block mt-1 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
                     Grade {p.qualityGrade}
                   </span>
                 </div>
 
                 <div className="mt-4 space-y-2">
-                  <button className={buttonClass} onClick={() => handleBuyNow(p)}>
+                  <button
+                    className="w-full border border-green-600 text-green-600 hover:bg-green-50 py-2 rounded-lg flex items-center justify-center gap-2"
+                    onClick={() => handleBuyNow(p)}
+                  >
                     <Wallet size={16} /> Buy Now
                   </button>
-
-                  <button className={buttonClass} onClick={() => handleAddToCart(p)}>
+                  <button
+                    className="w-full border border-green-600 text-green-600 hover:bg-green-50 py-2 rounded-lg flex items-center justify-center gap-2"
+                    onClick={() => handleAddToCart(p)}
+                  >
                     <ShoppingCart size={16} /> Add to Cart
                   </button>
-
-                  <button className={buttonClass} onClick={() => window.open(p.traceUrl, "_blank")}>
-                    <Sprout size={16} /> Trace Origin
+                  <button
+                    className="w-full text-sm text-gray-500 hover:text-green-700 flex items-center justify-center gap-1 pt-1"
+                    onClick={() => window.open(p.traceUrl, "_blank")}
+                  >
+                    <Sprout size={14} /> Trace Origin
                   </button>
                 </div>
               </motion.div>
@@ -296,9 +364,7 @@ const Marketplace = () => {
 
       {showScanner && <QRScanner onScan={() => setShowScanner(false)} onClose={() => setShowScanner(false)} />}
 
-      {selectedProduct && (
-        <CheckoutModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onConfirm={confirmOrder} />
-      )}
+      {selectedProduct && <CheckoutModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onConfirm={confirmOrder} />}
 
       {/* CART MODAL */}
       {showCartModal && (

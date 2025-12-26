@@ -17,11 +17,12 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     Listing findByCropIdAndBatchId(Long cropId, String batchId);
 
     List<Listing> findByBatchId(String batchId);
+
     Optional<Listing> findFirstByBatchIdAndStatus(String batchId, String status);
+
     Optional<Listing> findFirstByBatchId(String batchId);
 
-
     Listing findByBatchIdAndCropId(String batchId, Long cropId);
-    // ✅ ADD THIS
+
     List<Listing> findByStatus(String status);
 }

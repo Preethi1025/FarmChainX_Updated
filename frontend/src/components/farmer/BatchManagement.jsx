@@ -1,9 +1,6 @@
 // src/components/batches/BatchManagement.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import API from "../../api";
-
-
 import { QRCodeSVG } from "qrcode.react";
 import {
   ChevronDown,
@@ -19,28 +16,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
-/**
- * BatchManagement (Option 3: Combined UI)
- *
- * - Role-aware behaviour:
- *   - FARMER: view own batches, split, update status, send quality update (via status), process harvest
- *   - DISTRIBUTOR: view pending batches, approve/reject, merge batches
- *   - CONSUMER: read-only / view pending (market) batches
- *
- * Important: This frontend matches your current controller endpoints:
- * - GET /api/batches/farmer/{farmerId}
- * - GET /api/batches/{batchId}/crops
- * - PUT /api/batches/{batchId}/status   { status, userId, ...optional }
- * - POST /api/batches/{batchId}/split   { quantity, userId }
- * - POST /api/batches/merge/{targetBatchId} { sourceBatchIds, userId }
- * - PUT /api/batches/distributor/approve/{batchId}/{distributorId}
- * - PUT /api/batches/distributor/reject/{batchId}/{distributorId}
- * - GET /api/batches/pending
- * - GET /api/batches/{batchId}/trace
- *
- * If you add a dedicated quality endpoint later, switch the quality update request to that endpoint.
- */
-
 const STATUS_OPTIONS = [
   "PLANTED",
   "GROWING",
@@ -53,7 +28,7 @@ const STATUS_OPTIONS = [
 const QUALITY_OPTIONS = ["A", "B", "C"];
 
 const BatchManagement = ({ onClose }) => {
-  const { user } = useAuth(); // expects user.id and user.role
+  const { user } = useAuth();
   const [batches, setBatches] = useState([]);
   const [expandedBatchId, setExpandedBatchId] = useState(null);
   const [batchCrops, setBatchCrops] = useState({});
@@ -67,7 +42,7 @@ const BatchManagement = ({ onClose }) => {
 
   const apiBase = "http://localhost:8080/api/batches";
 
-  // Choose which fetch to call depending on role
+  // Fetch batches based on user role
   const fetchBatches = async () => {
     if (!user?.id) return;
     try {
@@ -76,16 +51,10 @@ const BatchManagement = ({ onClose }) => {
       let res;
       if (user.role === "FARMER") {
         res = await axios.get(`${apiBase}/farmer/${user.id}`);
-        setBatches(res.data || []);
-      } else if (user.role === "DISTRIBUTOR") {
-        // distributor sees pending batches to approve
-        res = await axios.get(`${apiBase}/pending`);
-        setBatches(res.data || []);
       } else {
-        // consumer or other roles: show pending marketplace (best effort)
         res = await axios.get(`${apiBase}/pending`);
-        setBatches(res.data || []);
       }
+      setBatches(res.data || []);
     } catch (err) {
       console.error("Error fetching batches:", err);
       setError("Failed to load batches. Please try again.");
@@ -100,7 +69,7 @@ const BatchManagement = ({ onClose }) => {
       const res = await axios.get(`${apiBase}/${batchId}/crops`);
       setBatchCrops((prev) => ({ ...prev, [batchId]: res.data || [] }));
     } catch (err) {
-      console.error("Error fetching crops for batch:", err);
+      console.error("Error fetching crops:", err);
       setError("Failed to load crops for this batch.");
     } finally {
       setLoadingRow(null);
@@ -124,55 +93,47 @@ const BatchManagement = ({ onClose }) => {
   const handleStatusChange = (batchId, newStatus) =>
     setStatusUpdate((prev) => ({ ...prev, [batchId]: newStatus }));
 
-const applyStatusUpdate = async (batchId) => {
-  const newStatus = statusUpdate[batchId];
-  if (!newStatus) {
-    alert("Please select a status first.");
-    return;
-  }
+  const applyStatusUpdate = async (batchId) => {
+    const newStatus = statusUpdate[batchId];
+    if (!newStatus) return alert("Please select a status first.");
+    try {
+      setLoadingRow(batchId);
+      await axios.put(`${apiBase}/${batchId}/status`, {
+        status: newStatus,
+        userId: user.id,
+      });
+      setBatches((prev) =>
+        prev.map((b) =>
+          b.batchId === batchId ? { ...b, status: newStatus } : b
+        )
+      );
+      alert("Batch status updated!");
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Failed to update status.");
+    } finally {
+      setLoadingRow(null);
+    }
+  };
 
-  try {
-    setLoadingRow(batchId);
-    await axios.put(`${apiBase}/${batchId}/status`, {
-      status: newStatus,
-      userId: user.id,
-    });
-    setBatches(prev =>
-      prev.map(b =>
-        b.batchId === batchId ? { ...b, status: newStatus } : b
-      )
-    );
-
-    alert("Batch status updated!");
-  } catch (err) {
-    console.error("Error updating batch status:", err);
-    alert("Failed to update status.");
-  } finally {
-    setLoadingRow(null);
-  }
-};
-
-  // QUALITY: use status update workaround to avoid 404 (backend lacks dedicated /quality endpoint)
+  // QUALITY
   const handleQualityChange = (batchId, field, value) =>
-    setQualityUpdate((prev) => ({ ...prev, [batchId]: { ...(prev[batchId] || {}), [field]: value } }));
+    setQualityUpdate((prev) => ({
+      ...prev,
+      [batchId]: { ...(prev[batchId] || {}), [field]: value },
+    }));
 
   const applyQualityUpdate = async (batchId) => {
     const q = qualityUpdate[batchId] || {};
-    if (!q.grade) {
-      alert("Please select a quality grade.");
-      return;
-    }
+    if (!q.grade) return alert("Please select a quality grade.");
     try {
       setLoadingRow(batchId);
-      // Send quality via the existing status endpoint as a safe workaround.
-      // If you add a dedicated /quality endpoint later, replace this call.
       await axios.put(`${apiBase}/${batchId}/status`, {
         status: "QUALITY_UPDATED",
         userId: user.id,
         qualityGrade: q.grade,
         confidence: q.confidence ? Number(q.confidence) : null,
       });
-      // update UI local approximation
       setBatches((prev) =>
         prev.map((b) =>
           b.batchId === batchId
@@ -182,105 +143,71 @@ const applyStatusUpdate = async (batchId) => {
       );
       alert("Quality marked (trace recorded).");
     } catch (err) {
-      console.error("Error updating batch quality:", err);
+      console.error("Error updating quality:", err);
       alert("Failed to update quality.");
     } finally {
       setLoadingRow(null);
     }
   };
 
-  // SPLIT: prompt for split quantity and send { quantity, userId }
+  // SPLIT
   const handleSplitBatch = async (batchId) => {
-    if (!window.confirm("This will split this batch into a new batch. Continue?")) return;
-    // ask user for quantity to split
-    const qtyStr = window.prompt("Enter quantity to split FROM this batch (numeric):");
+    if (!window.confirm("Split this batch?")) return;
+    const qtyStr = window.prompt("Enter quantity to split FROM this batch:");
     if (!qtyStr) return;
     const qty = Number(qtyStr);
-    if (isNaN(qty) || qty <= 0) {
-      alert("Enter a valid positive number");
-      return;
-    }
+    if (isNaN(qty) || qty <= 0) return alert("Enter a valid number.");
     try {
       setLoadingRow(batchId);
       const res = await axios.post(`${apiBase}/${batchId}/split`, {
         quantity: qty,
         userId: user.id,
       });
-      const newBatch = res.data;
-      if (newBatch) {
-        setBatches((prev) => [...prev, newBatch]);
-        alert(`Batch split! New batch created: ${newBatch.batchId}`);
-      } else {
-        // backend may return 204 or similar
-        alert("Split performed (no new batch returned). Refresh to see changes.");
-        fetchBatches();
-      }
+      if (res.data) setBatches((prev) => [...prev, res.data]);
+      else fetchBatches();
+      alert("Batch split successfully!");
     } catch (err) {
       console.error("Error splitting batch:", err);
-      alert(err.response?.data?.message || "Failed to split batch. Check quantity and batch status.");
+      alert(err.response?.data?.message || "Failed to split batch.");
     } finally {
       setLoadingRow(null);
     }
   };
 
-  // MERGE: use the controller endpoint POST /merge/{targetBatchId} with body { sourceBatchIds, userId }
-const handleMergeBatch = async (sourceBatchId) => {
-  const targetBatchId = mergeTarget[sourceBatchId];
+  // MERGE
+  const handleMergeBatch = async (sourceBatchId) => {
+    const targetBatchId = mergeTarget[sourceBatchId];
+    if (!targetBatchId) return alert("Select target batch.");
+    if (targetBatchId === sourceBatchId) return alert("Cannot merge into itself.");
+    if (!window.confirm(`Merge ${sourceBatchId} into ${targetBatchId}?`)) return;
 
-  if (!targetBatchId) {
-    alert("Select a target batch to merge into.");
-    return;
-  }
-
-  if (targetBatchId === sourceBatchId) {
-    alert("Source and target cannot be the same batch.");
-    return;
-  }
-
-  if (!window.confirm(
-    `All crops from ${sourceBatchId} will be moved into ${targetBatchId}. Continue?`
-  )) return;
-
-  try {
-    setLoadingRow(sourceBatchId);
-
-    const res = await API.post(
-      `/batches/merge/${targetBatchId}`,
-      {
+    try {
+      setLoadingRow(sourceBatchId);
+      const res = await axios.post(`${apiBase}/merge/${targetBatchId}`, {
         sourceBatchIds: [sourceBatchId],
         userId: user.id,
-      }
-    );
+      });
+      setBatches((prev) =>
+        prev
+          .filter((b) => b.batchId !== sourceBatchId)
+          .map((b) => (b.batchId === targetBatchId ? res.data.find(r => r.batchId === targetBatchId) || b : b))
+      );
+      alert("Batch merged successfully!");
+    } catch (err) {
+      console.error("Error merging batches:", err);
+      alert("Failed to merge batches.");
+    } finally {
+      setLoadingRow(null);
+    }
+  };
 
-    // ✅ Filter out merged batch immediately from frontend state
-    setBatches(prev =>
-      prev
-        .filter(b => b.batchId !== sourceBatchId) // remove the merged batch
-        .map(b => b.batchId === targetBatchId ? res.data.find(r => r.batchId === targetBatchId) || b : b) // update target batch info
-    );
-
-    alert("Batch merged successfully!");
-  } catch (err) {
-    console.error("Error merging batches:", err);
-    alert(
-      err.response?.data?.error ||
-      "Failed to merge batches. Ensure both batches exist and have same crop type."
-    );
-  } finally {
-    setLoadingRow(null);
-  }
-};
-
-
-
-  // Approve / Reject (distributor actions)
+  // DISTRIBUTOR
   const approveBatch = async (batchId) => {
     if (!window.confirm("Approve this batch?")) return;
     try {
       setLoadingRow(batchId);
       const res = await axios.put(`${apiBase}/distributor/approve/${batchId}/${user.id}`);
-      const updated = res.data;
-      setBatches((prev) => prev.map((b) => (b.batchId === batchId ? { ...b, ...updated } : b)));
+      setBatches((prev) => prev.map((b) => (b.batchId === batchId ? { ...b, ...res.data } : b)));
       alert("Batch approved.");
     } catch (err) {
       console.error("Error approving batch:", err);
@@ -295,9 +222,8 @@ const handleMergeBatch = async (sourceBatchId) => {
     try {
       setLoadingRow(batchId);
       const res = await axios.put(`${apiBase}/distributor/reject/${batchId}/${user.id}`);
-      const updated = res.data;
-      setBatches((prev) => prev.map((b) => (b.batchId === batchId ? { ...b, ...updated } : b)));
-      alert("Batch rejected and blocked.");
+      setBatches((prev) => prev.map((b) => (b.batchId === batchId ? { ...b, ...res.data } : b)));
+      alert("Batch rejected.");
     } catch (err) {
       console.error("Error rejecting batch:", err);
       alert("Failed to reject.");
@@ -306,33 +232,24 @@ const handleMergeBatch = async (sourceBatchId) => {
     }
   };
 
-  // Process daily harvest (FARMER): your controller hasn't included an endpoint for this in the last paste.
-  // We'll attempt to call it but handle 404 gracefully.
+  // DAILY HARVEST
   const handleProcessDailyHarvest = async () => {
     if (!user?.id) return;
-    if (!window.confirm("Create HARVESTED batch from crops READY_FOR_HARVEST?")) return;
+    if (!window.confirm("Create HARVESTED batch from READY_FOR_HARVEST?")) return;
     try {
       setProcessingHarvest(true);
-      // Best-effort call — if your backend defines it, it will work. If not, we handle error.
       const res = await axios.post(`${apiBase}/process-daily-harvest/${user.id}`);
-      if (!res.data) {
-        alert("No harvest created or endpoint returned no data.");
-      } else {
-        setBatches((prev) => [...prev, res.data]);
-        alert(`Harvest batch created: ${res.data.batchId}`);
-      }
+      if (res.data) setBatches((prev) => [...prev, res.data]);
+      alert(`Harvest batch created: ${res.data?.batchId || "None"}`);
     } catch (err) {
-      console.warn("process-daily-harvest not available or failed:", err);
-      alert("Process daily harvest failed (endpoint may not be implemented).");
+      console.warn("process-daily-harvest failed:", err);
+      alert("Failed to process harvest.");
     } finally {
       setProcessingHarvest(false);
     }
   };
 
-  const getQrUrlForBatch = (batch) => {
-    if (batch.qrCodeUrl) return batch.qrCodeUrl;
-    return `${window.location.origin}/trace/${batch.batchId}`;
-  };
+  const getQrUrlForBatch = (batch) => batch.qrCodeUrl || `${window.location.origin}/trace/${batch.batchId}`;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
@@ -421,6 +338,7 @@ const handleMergeBatch = async (sourceBatchId) => {
                           <tr className="bg-slate-50/60 border-b border-slate-100">
                             <td colSpan={6} className="px-4 py-3 text-xs text-slate-700">
                               <div className="grid md:grid-cols-[2fr_1.3fr] gap-4">
+                                {/* Crops + QR + Status + Quality + Split/Merge/Distributor */}
                                 <div>
                                   <p className="text-[11px] font-semibold text-slate-500 mb-2">Crops in this batch</p>
                                   {loadingRow === batch.batchId ? (
@@ -446,6 +364,7 @@ const handleMergeBatch = async (sourceBatchId) => {
                                 </div>
 
                                 <div className="space-y-3">
+                                  {/* QR */}
                                   <div className="bg-white rounded-lg border border-slate-200 p-2 flex gap-2">
                                     <div className="flex items-center justify-center bg-slate-50 rounded-md p-2">
                                       <QRCodeSVG value={getQrUrlForBatch(batch)} size={72} level="H" />
@@ -457,7 +376,7 @@ const handleMergeBatch = async (sourceBatchId) => {
                                     </div>
                                   </div>
 
-                                  {/* Status update */}
+                                  {/* Status Update */}
                                   <div className="bg-white rounded-lg border border-slate-200 p-2">
                                     <p className="text-[11px] font-semibold text-slate-700 mb-1">Update Status</p>
                                     <div className="flex items-center gap-2">
@@ -471,7 +390,7 @@ const handleMergeBatch = async (sourceBatchId) => {
                                     </div>
                                   </div>
 
-                                  {/* Quality update (uses status endpoint) */}
+                                  {/* Quality */}
                                   <div className="bg-white rounded-lg border border-slate-200 p-2">
                                     <p className="text-[11px] font-semibold text-slate-700 mb-1">Quality Grade</p>
                                     <div className="flex items-center gap-2 mb-1.5">
@@ -487,16 +406,14 @@ const handleMergeBatch = async (sourceBatchId) => {
                                     <p className="text-[10px] text-slate-400">Grade is A/B/C, confidence optional.</p>
                                   </div>
 
-                                  {/* Split / Merge / Distributor actions */}
+                                  {/* Split / Merge / Distributor */}
                                   <div className="bg-white rounded-lg border border-slate-200 p-2">
                                     <p className="text-[11px] font-semibold text-slate-700 mb-1">Split / Merge</p>
                                     <div className="flex flex-col gap-2">
-                                      {/* Split (farmers only) */}
                                       <button disabled={loadingRow === batch.batchId || user?.role !== "FARMER"} onClick={() => handleSplitBatch(batch.batchId)} className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-slate-200 hover:bg-slate-100 text-slate-700 disabled:opacity-60">
                                         <Scissors className="h-3 w-3" /> Split this batch
                                       </button>
 
-                                      {/* Merge (distributor or farmer) */}
                                       <div className="flex items-center gap-2">
                                         <select className="flex-1 border border-slate-200 rounded-md text-[11px] px-2 py-1" value={mergeTarget[batch.batchId] || ""} onChange={(e) => setMergeTarget((p) => ({ ...p, [batch.batchId]: e.target.value }))}>
                                           <option value="">Merge into other batch...</option>
@@ -508,7 +425,6 @@ const handleMergeBatch = async (sourceBatchId) => {
                                       </div>
                                       <p className="text-[10px] text-slate-400">You can only merge batches of the same crop type.</p>
 
-                                      {/* Distributor actions */}
                                       {user?.role === "DISTRIBUTOR" && (
                                         <div className="flex items-center gap-2 mt-1">
                                           <button disabled={loadingRow === batch.batchId} onClick={() => approveBatch(batch.batchId)} className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
@@ -522,7 +438,7 @@ const handleMergeBatch = async (sourceBatchId) => {
                                     </div>
                                   </div>
 
-                                  {/* Trace viewer (small) */}
+                                  {/* Trace preview */}
                                   <div className="bg-white rounded-lg border border-slate-200 p-2">
                                     <p className="text-[11px] font-semibold text-slate-700 mb-1">Recent Trace</p>
                                     <TracePreview batchId={batch.batchId} apiBase={apiBase} />
@@ -545,7 +461,7 @@ const handleMergeBatch = async (sourceBatchId) => {
   );
 };
 
-// Small trace preview component that loads traces for a batch
+// Trace preview component
 const TracePreview = ({ batchId, apiBase }) => {
   const [traces, setTraces] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -556,12 +472,8 @@ const TracePreview = ({ batchId, apiBase }) => {
       setLoading(true);
       try {
         const res = await axios.get(`${apiBase}/${batchId}/trace`);
-        if (mounted) {
-          // controller returns a wrapper object; traces at res.data.traces
-          setTraces(res.data?.traces || []);
-        }
-      } catch (err) {
-        // don't spam errors in small preview
+        if (mounted) setTraces(res.data?.traces || []);
+      } catch {
         setTraces([]);
       } finally {
         setLoading(false);
