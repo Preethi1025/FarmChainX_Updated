@@ -1,0 +1,20 @@
+# Node
+node_modules/
+dist/
+.env
+
+# Spring Boot
+target/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# API keys / config
+application.properties
