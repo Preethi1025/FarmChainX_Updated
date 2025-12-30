@@ -17,4 +17,4 @@ target/
 Thumbs.db
 
 # API keys / config
-#application.properties
+application.properties
