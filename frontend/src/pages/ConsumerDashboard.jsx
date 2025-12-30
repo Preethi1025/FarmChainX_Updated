@@ -10,12 +10,23 @@ import {
   ArrowLeft, Sparkles, Globe, MessageCircle, Zap, BookOpen, Brain
 } from 'lucide-react';
 import { useAuth } from "../context/AuthContext";
-import FreeAIAgent from "./FreeAIAgent"; // Assuming FreeAIAgent is in same folder
+import FreeAIAgent from "./FreeAIAgent"; 
+import { ShoppingCart } from "lucide-react";
+// Assuming FreeAIAgent is in same folder
 
 const ConsumerDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showAIAssistant, setShowAIAssistant] = useState(false);
+
+   const showRewardsPopup = () => {
+    alert(
+      "🎁 AVAILABLE REWARDS\n\n" +
+        "• ₹100 OFF on shopping above ₹500\n" +
+        "• ₹250 OFF on shopping above ₹1000\n" +
+        "• Free delivery on your 5th order"
+    );
+  };
 
   useEffect(() => {
     if (!user) {
@@ -168,10 +179,10 @@ const ConsumerDashboard = () => {
               {/* Rewards */}
               <div className={cardClass}>
                 <Gift className="text-purple-600 mb-2" />
-                <h3 className="text-lg font-semibold">Rewards</h3>
-                <p className="text-gray-500 text-sm">Check your earned points & vouchers</p>
+                <h3 className="text-lg font-semibold">Offers</h3>
+                <p className="text-gray-500 text-sm">Check Upcoming Offers</p>
                 <button type="button" onClick={() => navigate("/rewards")} className="mt-4 text-purple-600 font-medium">
-                  View Rewards →
+                  Offer can be activated from New Year →
                 </button>
               </div>
             </div>
@@ -188,9 +199,38 @@ const ConsumerDashboard = () => {
               View Live Orders
             </button>
           </div>
+           <div className="bg-white rounded-2xl shadow-md p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <ShoppingCart className="text-green-600" />
+            <h2 className="text-xl font-semibold">My Cart</h2>
+          </div>
+
+          {JSON.parse(localStorage.getItem("cart") || "[]").length === 0 ? (
+            <p className="text-gray-500">Your cart is empty 🧺</p>
+          ) : (
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {JSON.parse(localStorage.getItem("cart") || "[]").map((item, i) => (
+                <div key={i} className="flex justify-between border rounded-lg p-3 text-sm">
+                  <span>{item.cropName}</span>
+                  <span>
+                    {item.quantity} × ₹{item.priceAtCart || item.price}
+                  </span>
+                </div>
+              ))}
+              <button
+                onClick={() =>
+                  navigate("/marketplace", { state: { showCart: true } })
+                }
+                className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+              >
+                Go to Marketplace → Cart
+              </button>
+            </div>
+          )}
+        </div>
 
           {/* Stats Overview */}
-          <div className="bg-white rounded-2xl shadow-md p-6">
+          {/* <div className="bg-white rounded-2xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Stats</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-green-50 rounded-xl">
@@ -210,7 +250,9 @@ const ConsumerDashboard = () => {
                 <div className="text-sm text-gray-600">Favorite Items</div>
               </div>
             </div>
-          </div>
+          </div> */}
+
+          
 
           {/* Tips for Buyers */}
           <div className="bg-gradient-to-r from-primary-100 to-emerald-100 border border-primary-200 rounded-2xl p-6">
